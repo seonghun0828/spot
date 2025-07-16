@@ -22,6 +22,7 @@ export default function HomePage() {
         <div className="mx-auto max-w-7xl flex justify-between w-full items-center">
           <h1 className="text-2xl font-bold text-white">Spot</h1>
           <a
+            id="beta-tester-header-link"
             href="#cta"
             className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-full transition duration-300"
           >
@@ -45,6 +46,7 @@ export default function HomePage() {
                 괜찮아요.
               </p>
               <a
+                id="beta-tester-hero-link"
                 href="#cta"
                 className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-8 rounded-full text-lg transition duration-300 transform hover:scale-105"
               >
@@ -254,6 +256,7 @@ export default function HomePage() {
               알려드릴게요.
             </p>
             <a
+              id="release-notify-form"
               href="https://forms.gle/HoUr41GrhngVc9r27" // 출시 알림 구글 폼 링크
               target="_blank"
               rel="noopener noreferrer"
@@ -350,6 +353,7 @@ export default function HomePage() {
               Spot을 만듭니다.
             </p>
             <a
+              id="beta-tester-form"
               href="https://forms.gle/mEy7PCzCCWijnvS26"
               target="_blank"
               rel="noopener noreferrer"
@@ -370,6 +374,7 @@ export default function HomePage() {
           아래 설문에 참여해주시면 서비스 개선에 큰 도움이 됩니다.
         </p>
         <a
+          id="survey-form"
           href="https://forms.gle/A24YLxMgom9y19xz9"
           target="_blank"
           rel="noopener noreferrer"
