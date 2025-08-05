@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import {
   MapPin,
   RefreshCw,
@@ -328,11 +329,14 @@ export default function HomePage() {
               >
                 <div className="flex space-x-4">
                   {/* 포스트 이미지 */}
-                  <div className="w-20 h-20 bg-gray-200 rounded-lg overflow-hidden flex-shrink-0">
+                  <div className="w-20 h-20 bg-gray-200 rounded-lg overflow-hidden flex-shrink-0 relative">
                     {post.image ? (
-                      <div className="w-full h-full bg-gradient-to-br from-blue-100 to-purple-100 flex items-center justify-center">
-                        <span className="text-gray-400 text-xs">이미지</span>
-                      </div>
+                      <Image
+                        src={post.image}
+                        alt="Post Image"
+                        fill
+                        className="object-cover"
+                      />
                     ) : (
                       <div className="w-full h-full bg-gradient-to-br from-blue-100 to-purple-100 flex items-center justify-center">
                         <span className="text-gray-400 text-xs">
