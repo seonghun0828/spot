@@ -1,40 +1,21 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { MapPin, Users, ArrowRight } from 'lucide-react';
 
 export default function LandingPage() {
   const router = useRouter();
-  const [locationPermission, setLocationPermission] = useState<
-    'granted' | 'denied' | 'prompt'
-  >('prompt');
-
-  useEffect(() => {
-    // 위치 권한 상태 확인
-    if (navigator.permissions) {
-      navigator.permissions.query({ name: 'geolocation' }).then((result) => {
-        setLocationPermission(result.state);
-      });
-    }
-  }, []);
 
   const handleGetStarted = async () => {
-    if (locationPermission === 'granted') {
+    try {
+      await new Promise<GeolocationPosition>((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject);
+      });
       router.push('/');
-    } else {
-      try {
-        await new Promise<GeolocationPosition>((resolve, reject) => {
-          navigator.geolocation.getCurrentPosition(resolve, reject);
-        });
-        setLocationPermission('granted');
-        router.push('/');
-      } catch {
-        setLocationPermission('denied');
-        alert(
-          '위치 권한이 필요합니다. 브라우저 설정에서 위치 권한을 허용해주세요.'
-        );
-      }
+    } catch {
+      alert(
+        '위치 권한이 필요합니다. 브라우저 설정에서 위치 권한을 허용해주세요.'
+      );
     }
   };
 
@@ -69,7 +50,7 @@ export default function LandingPage() {
             </div>
           </div>
 
-          {/* 위치 권한 설명 */}
+          {/* 위치 기반 서비스 설명 */}
           <div className="bg-white rounded-2xl p-6 mb-8 shadow-lg">
             <div className="flex items-start space-x-3">
               <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
