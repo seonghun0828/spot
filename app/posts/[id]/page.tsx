@@ -282,7 +282,7 @@ export default function PostDetailPage() {
       </main>
 
       {/* 하단 네비게이션 */}
-      <BottomNavigation activeTab="home" />
+      <BottomNavigation activeTab={undefined} />
     </div>
   );
 }

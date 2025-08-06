@@ -4,11 +4,13 @@ import { useRouter } from 'next/navigation';
 import { MapPin, MessageSquare, User } from 'lucide-react';
 
 interface BottomNavigationProps {
-  activeTab?: 'home' | 'chat' | 'activity';
+  activeTab?: 'home' | 'chat' | 'activity' | undefined;
+  isLoggedIn?: boolean;
 }
 
 export default function BottomNavigation({
-  activeTab = 'home',
+  activeTab,
+  isLoggedIn = false,
 }: BottomNavigationProps) {
   const router = useRouter();
 
@@ -18,10 +20,18 @@ export default function BottomNavigation({
         router.push('/');
         break;
       case 'chat':
-        router.push('/chat');
+        if (isLoggedIn) {
+          router.push('/chat');
+        } else {
+          router.push('/login');
+        }
         break;
       case 'activity':
-        router.push('/my-activity');
+        if (isLoggedIn) {
+          router.push('/my-activity');
+        } else {
+          router.push('/login');
+        }
         break;
     }
   };

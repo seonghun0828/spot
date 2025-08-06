@@ -254,11 +254,12 @@ export default function HomePage() {
 
   const handleCreatePost = () => {
     console.log('포스트 만들기 버튼 클릭');
-    if (isLoggedIn) {
-      router.push('/posts/create');
-    } else {
-      router.push('/auth');
-    }
+    router.push('/posts/create');
+    // if (isLoggedIn) {
+    //   router.push('/posts/create');
+    // } else {
+    //   router.push('/login');
+    // }
   };
 
   return (
@@ -401,7 +402,7 @@ export default function HomePage() {
       </button>
 
       {/* 하단 네비게이션 */}
-      <BottomNavigation activeTab="home" />
+      <BottomNavigation activeTab="home" isLoggedIn={isLoggedIn} />
     </div>
   );
 }
