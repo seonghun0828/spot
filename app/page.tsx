@@ -3,13 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import {
-  MapPin,
-  RefreshCw,
-  Navigation,
-  MessageSquare,
-  User,
-} from 'lucide-react';
+import { MapPin, RefreshCw, Navigation } from 'lucide-react';
+import BottomNavigation from './components/BottomNavigation';
 
 // 임시 데이터 타입 정의
 interface Post {
@@ -406,28 +401,7 @@ export default function HomePage() {
       </button>
 
       {/* 하단 네비게이션 */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-2">
-        <div className="flex justify-around max-w-md mx-auto">
-          <button className="flex flex-col items-center space-y-1 py-2 px-3 rounded-lg text-blue-600 bg-blue-50">
-            <MapPin className="w-5 h-5" />
-            <span className="text-xs font-medium">홈</span>
-          </button>
-          <button
-            onClick={() => router.push('/chat')}
-            className="flex flex-col items-center space-y-1 py-2 px-3 rounded-lg text-gray-600 hover:text-blue-600 hover:bg-gray-50"
-          >
-            <MessageSquare className="w-5 h-5" />
-            <span className="text-xs font-medium">채팅방</span>
-          </button>
-          <button
-            onClick={() => router.push('/my-activity')}
-            className="flex flex-col items-center space-y-1 py-2 px-3 rounded-lg text-gray-600 hover:text-blue-600 hover:bg-gray-50"
-          >
-            <User className="w-5 h-5" />
-            <span className="text-xs font-medium">내 활동</span>
-          </button>
-        </div>
-      </div>
+      <BottomNavigation activeTab="home" />
     </div>
   );
 }
