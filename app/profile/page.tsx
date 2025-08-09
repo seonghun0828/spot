@@ -2,14 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import {
-  ArrowLeft,
-  Edit3,
-  ChevronRight,
-  MessageSquare,
-  FileText,
-  LogOut,
-} from 'lucide-react';
+import { ArrowLeft, Edit3, LogOut } from 'lucide-react';
 
 // 임시 사용자 데이터 (백엔드 연동 전까지 플레이스홀더)
 const mockUser = {
@@ -26,8 +19,7 @@ export default function ProfilePage() {
 
   const handleBack = () => router.back();
   const handleEdit = () => router.push('/profile/modify');
-  const goMyPosts = () => router.push('/profile/posts');
-  const goMyChats = () => router.push('/profile/chats');
+  // 스펙 변경으로 목록 바로가기는 프로필에서 제거됨
 
   const handleLogout = () => {
     // TODO: 백엔드 연동 후 실제 로그아웃 처리
@@ -105,30 +97,7 @@ export default function ProfilePage() {
             </div>
           </section>
 
-          {/* 목록 바로가기 섹션 */}
-          <section className="mt-3 bg-white divide-y divide-gray-100">
-            <button
-              onClick={goMyPosts}
-              className="w-full px-4 py-4 flex items-center justify-between hover:bg-gray-50"
-            >
-              <div className="flex items-center gap-3">
-                <FileText className="w-5 h-5 text-gray-700" />
-                <p className="text-gray-900 font-medium">내가 만든 포스트</p>
-              </div>
-              <ChevronRight className="w-4 h-4 text-gray-400" />
-            </button>
-
-            <button
-              onClick={goMyChats}
-              className="w-full px-4 py-4 flex items-center justify-between hover:bg-gray-50"
-            >
-              <div className="flex items-center gap-3">
-                <MessageSquare className="w-5 h-5 text-gray-700" />
-                <p className="text-gray-900 font-medium">참여한 채팅방</p>
-              </div>
-              <ChevronRight className="w-4 h-4 text-gray-400" />
-            </button>
-          </section>
+          {/* 목록 바로가기 섹션 - 스펙 변경으로 제거됨 (내 활동 페이지로 이동) */}
 
           {/* 설정 섹션 */}
           <section className="mt-3 bg-white">
@@ -140,7 +109,6 @@ export default function ProfilePage() {
                 <LogOut className="w-5 h-5 text-red-500" />
                 <span className="text-red-500 font-medium">로그아웃</span>
               </div>
-              <ChevronRight className="w-4 h-4 text-gray-400" />
             </button>
           </section>
         </div>

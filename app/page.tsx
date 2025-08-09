@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { MapPin, RefreshCw, Navigation } from 'lucide-react';
+import { MapPin, RefreshCw, Navigation, Bell, User } from 'lucide-react';
 import BottomNavigation from './components/BottomNavigation';
 
 // 임시 데이터 타입 정의
@@ -56,6 +56,7 @@ export default function HomePage() {
   const router = useRouter();
   const [posts] = useState<Post[]>(mockPosts);
   const [isLoggedIn] = useState(false); // 임시 로그인 상태
+  const [isNotifOpen, setIsNotifOpen] = useState(false);
   const [currentLocation, setCurrentLocation] = useState<{
     latitude: number;
     longitude: number;
@@ -265,7 +266,7 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
       {/* 헤더 */}
-      <header className="bg-white border-b border-gray-200 px-4 py-4">
+      <header className="bg-white border-b border-gray-200 px-4 py-4 relative">
         <div className="max-w-md mx-auto">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center space-x-2">
@@ -274,13 +275,66 @@ export default function HomePage() {
                 주변 포스트
               </h1>
             </div>
-            <button
-              onClick={handleRefresh}
-              className="p-2 text-gray-500 hover:text-blue-500 transition-colors"
-              aria-label="새로고침"
-            >
-              <RefreshCw className="w-5 h-5" />
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleRefresh}
+                className="p-2 text-gray-500 hover:text-blue-500 transition-colors"
+                aria-label="새로고침"
+              >
+                <RefreshCw className="w-5 h-5" />
+              </button>
+              <div className="relative">
+                <button
+                  onClick={() => setIsNotifOpen((v) => !v)}
+                  className="p-2 text-gray-500 hover:text-blue-500 transition-colors"
+                  aria-label="알림"
+                >
+                  <Bell className="w-5 h-5" />
+                </button>
+                {isNotifOpen && (
+                  <div className="absolute right-0 mt-2 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-20">
+                    <div className="px-3 py-2 border-b text-xs text-gray-500">
+                      최근 알림
+                    </div>
+                    <button
+                      onClick={() => {
+                        setIsNotifOpen(false);
+                        // 알림 클릭 예시: 내 포스트 관심 알림 → 상세로 이동
+                        router.push(`/posts/${mockPosts[0]?.id ?? '1'}`);
+                      }}
+                      className="w-full text-left px-3 py-3 hover:bg-gray-50"
+                    >
+                      <div className="text-sm text-gray-900">
+                        내 포스트에 '관심 있어요'가 달렸어요
+                      </div>
+                      <div className="text-xs text-gray-500 mt-0.5">2분 전</div>
+                    </button>
+                    <button
+                      onClick={() => {
+                        setIsNotifOpen(false);
+                        // 알림 클릭 예시: 채팅방 생성 알림 → 채팅 목록 또는 특정 방
+                        router.push(`/chat`);
+                      }}
+                      className="w-full text-left px-3 py-3 hover:bg-gray-50 border-t"
+                    >
+                      <div className="text-sm text-gray-900">
+                        새 채팅방이 생성되었어요
+                      </div>
+                      <div className="text-xs text-gray-500 mt-0.5">
+                        10분 전
+                      </div>
+                    </button>
+                  </div>
+                )}
+              </div>
+              <button
+                onClick={() => router.push('/profile')}
+                className="p-2 text-gray-500 hover:text-blue-500 transition-colors"
+                aria-label="프로필"
+              >
+                <User className="w-5 h-5" />
+              </button>
+            </div>
           </div>
 
           {/* 현재 위치 표시 */}
