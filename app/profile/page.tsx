@@ -113,12 +113,7 @@ export default function ProfilePage() {
             >
               <div className="flex items-center gap-3">
                 <FileText className="w-5 h-5 text-gray-700" />
-                <div className="text-left">
-                  <p className="text-gray-900 font-medium">내가 만든 포스트</p>
-                  <p className="text-gray-500 text-sm">
-                    내가 생성한 포스트 목록 보기
-                  </p>
-                </div>
+                <p className="text-gray-900 font-medium">내가 만든 포스트</p>
               </div>
               <ChevronRight className="w-4 h-4 text-gray-400" />
             </button>
@@ -129,12 +124,7 @@ export default function ProfilePage() {
             >
               <div className="flex items-center gap-3">
                 <MessageSquare className="w-5 h-5 text-gray-700" />
-                <div className="text-left">
-                  <p className="text-gray-900 font-medium">참여한 채팅방</p>
-                  <p className="text-gray-500 text-sm">
-                    내가 참여 중인 채팅방 목록 보기
-                  </p>
-                </div>
+                <p className="text-gray-900 font-medium">참여한 채팅방</p>
               </div>
               <ChevronRight className="w-4 h-4 text-gray-400" />
             </button>
