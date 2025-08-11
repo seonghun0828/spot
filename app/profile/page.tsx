@@ -1,29 +1,80 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Edit3, LogOut } from 'lucide-react';
-
-// 임시 사용자 데이터 (백엔드 연동 전까지 플레이스홀더)
-const mockUser = {
-  nickname: '스팟러버',
-  profileImageUrl: '',
-  interests: ['야구', '카페', '네트워킹'],
-  age: 28,
-  gender: '남성',
-};
+import { useAuth } from '../contexts/AuthContext';
+import { signOutUser } from '@/lib/auth';
 
 export default function ProfilePage() {
   const router = useRouter();
+  const { user, loading } = useAuth();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  // 로그인되지 않은 경우 로그인 페이지로 리다이렉트 (useEffect 사용)
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push('/login');
+    }
+  }, [user, loading, router]);
+
+  // 로딩 중이거나 로그인되지 않은 경우 로딩 화면 표시
+  if (loading || !user) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 text-center">
+          <div className="w-16 h-16 bg-blue-100 rounded-full mx-auto mb-4 flex items-center justify-center">
+            <svg
+              className="w-8 h-8 text-blue-500 animate-spin"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+              />
+            </svg>
+          </div>
+          <h2 className="text-xl font-bold text-gray-900 mb-2">
+            {loading ? '로그인 상태 확인 중...' : '로그인이 필요합니다'}
+          </h2>
+          <p className="text-gray-600">
+            {loading ? '잠시만 기다려주세요' : '로그인 페이지로 이동합니다'}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // 임시 사용자 데이터 (백엔드 연동 전까지 플레이스홀더)
+  const mockUser = {
+    nickname: user.displayName || '사용자',
+    profileImageUrl: user.photoURL || '',
+    interests: ['야구', '카페', '네트워킹'],
+    age: 28,
+    gender: '남성',
+  };
 
   const handleBack = () => router.back();
   const handleEdit = () => router.push('/profile/modify');
-  // 스펙 변경으로 목록 바로가기는 프로필에서 제거됨
 
-  const handleLogout = () => {
-    // TODO: 백엔드 연동 후 실제 로그아웃 처리
-    setShowLogoutConfirm(false);
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    try {
+      await signOutUser();
+      setShowLogoutConfirm(false);
+      // 로그아웃 후 홈 페이지로 리다이렉트
+      router.push('/');
+    } catch (error) {
+      console.error('로그아웃 오류:', error);
+      alert('로그아웃 중 오류가 발생했습니다.');
+    } finally {
+      setIsLoggingOut(false);
+    }
   };
 
   return (
@@ -75,6 +126,7 @@ export default function ProfilePage() {
                 <p className="text-xl font-bold text-gray-900">
                   {mockUser.nickname}
                 </p>
+                <p className="text-sm text-gray-500 mt-1">{user.email}</p>
               </div>
 
               {mockUser.interests?.length > 0 && (
@@ -103,11 +155,14 @@ export default function ProfilePage() {
           <section className="mt-3 bg-white">
             <button
               onClick={() => setShowLogoutConfirm(true)}
-              className="w-full px-4 py-4 flex items-center justify-between hover:bg-gray-50"
+              disabled={isLoggingOut}
+              className="w-full px-4 py-4 flex items-center justify-between hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <div className="flex items-center gap-3">
                 <LogOut className="w-5 h-5 text-red-500" />
-                <span className="text-red-500 font-medium">로그아웃</span>
+                <span className="text-red-500 font-medium">
+                  {isLoggingOut ? '로그아웃 중...' : '로그아웃'}
+                </span>
               </div>
             </button>
           </section>
@@ -125,15 +180,43 @@ export default function ProfilePage() {
             <div className="flex gap-3">
               <button
                 onClick={() => setShowLogoutConfirm(false)}
-                className="flex-1 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50"
+                disabled={isLoggingOut}
+                className="flex-1 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 취소
               </button>
               <button
                 onClick={handleLogout}
-                className="flex-1 py-2 rounded-lg bg-red-500 text-white hover:bg-red-600"
+                disabled={isLoggingOut}
+                className="flex-1 py-2 rounded-lg bg-red-500 text-white hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
               >
-                로그아웃
+                {isLoggingOut ? (
+                  <>
+                    <svg
+                      className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      ></circle>
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      ></path>
+                    </svg>
+                    로그아웃 중...
+                  </>
+                ) : (
+                  '로그아웃'
+                )}
               </button>
             </div>
           </div>
