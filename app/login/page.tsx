@@ -72,11 +72,27 @@ export default function LoginPage() {
     setGoogleLoading(true);
 
     try {
-      await signInWithGoogle();
-      // 로그인 성공 시 홈으로 이동 (useEffect에서 처리됨)
-    } catch (error) {
+      const user = await signInWithGoogle();
+
+      if (user) {
+        // 로그인 성공 - useEffect에서 홈으로 리다이렉트됨
+        console.log('로그인 성공:', user.email);
+      } else {
+        // 사용자가 팝업을 닫은 경우
+        console.log('로그인이 취소되었습니다.');
+      }
+    } catch (error: unknown) {
       console.error('구글 로그인 오류:', error);
-      alert('구글 로그인 중 오류가 발생했습니다.');
+
+      // 팝업이 닫힌 경우는 에러 메시지를 표시하지 않음
+      if (
+        error &&
+        typeof error === 'object' &&
+        'code' in error &&
+        error.code !== 'auth/popup-closed-by-user'
+      ) {
+        alert('구글 로그인 중 오류가 발생했습니다.');
+      }
     } finally {
       setGoogleLoading(false);
     }

@@ -32,8 +32,21 @@ export const signInWithGoogle = async () => {
     }
 
     return result.user;
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('구글 로그인 오류:', error);
+
+    // 팝업이 사용자에 의해 닫힌 경우는 정상적인 동작이므로 에러를 던지지 않음
+    if (
+      error &&
+      typeof error === 'object' &&
+      'code' in error &&
+      error.code === 'auth/popup-closed-by-user'
+    ) {
+      console.log('사용자가 로그인 팝업을 닫았습니다.');
+      return null;
+    }
+
+    // 다른 에러는 그대로 던짐
     throw error;
   }
 };
