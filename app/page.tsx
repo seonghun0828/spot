@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { MapPin, RefreshCw, Navigation, Bell, User } from 'lucide-react';
 import BottomNavigation from './components/BottomNavigation';
 import { useCallback } from 'react';
+import { useAuth } from './contexts/AuthContext';
 
 // 임시 데이터 타입 정의
 interface Post {
@@ -55,8 +56,8 @@ const mockPosts: Post[] = [
 
 export default function HomePage() {
   const router = useRouter();
+  const { user } = useAuth();
   const [posts] = useState<Post[]>(mockPosts);
-  const [isLoggedIn] = useState(false); // 임시 로그인 상태
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const [currentLocation, setCurrentLocation] = useState<{
     latitude: number;
@@ -255,13 +256,11 @@ export default function HomePage() {
   };
 
   const handleCreatePost = () => {
-    console.log('포스트 만들기 버튼 클릭');
-    router.push('/posts/create');
-    // if (isLoggedIn) {
-    //   router.push('/posts/create');
-    // } else {
-    //   router.push('/login');
-    // }
+    if (user) {
+      router.push('/posts/create');
+    } else {
+      router.push('/login');
+    }
   };
 
   return (
@@ -457,7 +456,7 @@ export default function HomePage() {
       </button>
 
       {/* 하단 네비게이션 */}
-      <BottomNavigation activeTab="home" isLoggedIn={isLoggedIn} />
+      <BottomNavigation activeTab="home" />
     </div>
   );
 }

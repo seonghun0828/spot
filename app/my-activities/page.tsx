@@ -239,7 +239,7 @@ export default function MyActivitiesPage() {
       <div className="h-16" />
 
       {/* 하단 네비게이션 */}
-      <BottomNavigation activeTab="activity" isLoggedIn={true} />
+      <BottomNavigation activeTab="activity" />
     </div>
   );
 }

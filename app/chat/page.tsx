@@ -145,7 +145,7 @@ export default function ChatListPage() {
       </div>
 
       {/* 하단 네비게이션 */}
-      <BottomNavigation activeTab="chat" isLoggedIn={true} />
+      <BottomNavigation activeTab="chat" />
     </div>
   );
 }
