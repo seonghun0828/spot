@@ -14,7 +14,7 @@ interface PostCardProps {
 }
 
 export default function PostCard({
-  id,
+  // id,
   title,
   author,
   distance,

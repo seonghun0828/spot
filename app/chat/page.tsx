@@ -137,7 +137,7 @@ export default function ChatListPage() {
                 참여한 채팅방이 없어요
               </h3>
               <p className="text-gray-600 text-sm">
-                마음에 드는 포스트에서 '관심 있어요'를 눌러보세요!
+                마음에 드는 포스트에서 &apos;관심 있어요&apos;를 눌러보세요!
               </p>
             </div>
           )}

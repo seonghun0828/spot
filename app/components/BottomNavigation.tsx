@@ -10,8 +10,8 @@ interface BottomNavigationProps {
 
 export default function BottomNavigation({
   activeTab,
-  isLoggedIn = false,
-}: BottomNavigationProps) {
+}: // isLoggedIn = false,
+BottomNavigationProps) {
   const router = useRouter();
 
   const handleTabClick = (tab: string) => {
@@ -20,18 +20,18 @@ export default function BottomNavigation({
         router.push('/');
         break;
       case 'chat':
-        if (isLoggedIn) {
-          router.push('/chat');
-        } else {
-          router.push('/login');
-        }
+        // if (isLoggedIn) {
+        router.push('/chat');
+        // } else {
+        //   router.push('/login');
+        // }
         break;
       case 'activity':
-        if (isLoggedIn) {
-          router.push('/my-activity');
-        } else {
-          router.push('/login');
-        }
+        // if (isLoggedIn) {
+        router.push('/my-activities');
+        // } else {
+        //   router.push('/login');
+        // }
         break;
     }
   };

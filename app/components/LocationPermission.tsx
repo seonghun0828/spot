@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { MapPin, AlertCircle, CheckCircle } from 'lucide-react';
+import { useCallback } from 'react';
 
 interface LocationPermissionProps {
   onPermissionGranted: (location: {
@@ -28,55 +29,7 @@ export default function LocationPermission({
   const [isRetrying, setIsRetrying] = useState(false);
   const [locationData, setLocationData] = useState<LocationData | null>(null);
 
-  useEffect(() => {
-    checkPermissionStatus();
-  }, []);
-
-  // 위도경도를 주소로 변환하는 함수
-  const reverseGeocode = async (
-    lat: number,
-    lng: number
-  ): Promise<string | undefined> => {
-    console.log('🔍 reverseGeocode 함수 시작:', { lat, lng });
-    try {
-      // 카카오 지도 API를 사용한 역지오코딩
-      const response = await fetch(
-        `https://dapi.kakao.com/v2/local/geo/coord2address.json?x=${lng}&y=${lat}`,
-        {
-          headers: {
-            Authorization: `KakaoAK ${process.env.NEXT_PUBLIC_KAKAO_API_KEY}`,
-          },
-        }
-      );
-
-      console.log('📡 카카오 API 응답 상태:', response.status);
-
-      if (!response.ok) {
-        console.warn('카카오 API 호출 실패, 기본 좌표만 사용');
-        return undefined;
-      }
-
-      const data = await response.json();
-      console.log('📋 카카오 API 응답 데이터:', data);
-
-      if (data.documents && data.documents.length > 0) {
-        const address = data.documents[0].address;
-        console.log('📍 주소 정보:', address);
-        if (address && address.address_name) {
-          // 동 이름만 추출 (예: "서울특별시 강남구 역삼동" -> "역삼동")
-          console.log('🏘️ 추출된 동 이름:', address.address_name);
-          return address.address_name;
-        }
-      }
-      console.log('❌ 주소 변환 실패: documents가 없거나 address가 없음');
-      return undefined;
-    } catch (error) {
-      console.warn('주소 변환 실패:', error);
-      return undefined;
-    }
-  };
-
-  const checkPermissionStatus = async () => {
+  const checkPermissionStatus = useCallback(async () => {
     try {
       if (navigator.permissions) {
         const result = await navigator.permissions.query({
@@ -132,6 +85,54 @@ export default function LocationPermission({
     } catch (error) {
       console.error('권한 상태 확인 실패:', error);
       setPermissionStatus('prompt');
+    }
+  }, [onPermissionGranted, onPermissionDenied]);
+
+  useEffect(() => {
+    checkPermissionStatus();
+  }, [checkPermissionStatus]);
+
+  // 위도경도를 주소로 변환하는 함수
+  const reverseGeocode = async (
+    lat: number,
+    lng: number
+  ): Promise<string | undefined> => {
+    console.log('🔍 reverseGeocode 함수 시작:', { lat, lng });
+    try {
+      // 카카오 지도 API를 사용한 역지오코딩
+      const response = await fetch(
+        `https://dapi.kakao.com/v2/local/geo/coord2address.json?x=${lng}&y=${lat}`,
+        {
+          headers: {
+            Authorization: `KakaoAK ${process.env.NEXT_PUBLIC_KAKAO_API_KEY}`,
+          },
+        }
+      );
+
+      console.log('📡 카카오 API 응답 상태:', response.status);
+
+      if (!response.ok) {
+        console.warn('카카오 API 호출 실패, 기본 좌표만 사용');
+        return undefined;
+      }
+
+      const data = await response.json();
+      console.log('📋 카카오 API 응답 데이터:', data);
+
+      if (data.documents && data.documents.length > 0) {
+        const address = data.documents[0].address;
+        console.log('📍 주소 정보:', address);
+        if (address && address.address_name) {
+          // 동 이름만 추출 (예: "서울특별시 강남구 역삼동" -> "역삼동")
+          console.log('🏘️ 추출된 동 이름:', address.address_name);
+          return address.address_name;
+        }
+      }
+      console.log('❌ 주소 변환 실패: documents가 없거나 address가 없음');
+      return undefined;
+    } catch (error) {
+      console.warn('주소 변환 실패:', error);
+      return undefined;
     }
   };
 

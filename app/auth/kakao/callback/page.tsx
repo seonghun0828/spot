@@ -1,9 +1,39 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
-export default function KakaoCallbackPage() {
+// 로딩 컴포넌트
+function LoadingComponent() {
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+      <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 text-center">
+        <div className="w-16 h-16 bg-yellow-100 rounded-full mx-auto mb-4 flex items-center justify-center">
+          <svg
+            className="w-8 h-8 text-yellow-500 animate-spin"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M12 3c5.799 0 10.5 3.664 10.5 8.185 0 4.52-4.701 8.184-10.5 8.184a13.5 13.5 0 0 1-1.727-.11l-4.408 2.883c-.501.265-.678.236-.472-.413l.892-3.678c-2.88-1.46-4.785-3.99-4.785-6.866C1.5 6.665 6.201 3 12 3z"
+            />
+          </svg>
+        </div>
+        <h2 className="text-xl font-bold text-gray-900 mb-2">
+          카카오 로그인 처리 중
+        </h2>
+        <p className="text-gray-600">잠시만 기다려주세요...</p>
+      </div>
+    </div>
+  );
+}
+
+// 메인 콜백 컴포넌트
+function KakaoCallbackContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [error, setError] = useState<string | null>(null);
@@ -102,5 +132,14 @@ export default function KakaoCallbackPage() {
         <p className="text-gray-600">잠시만 기다려주세요...</p>
       </div>
     </div>
+  );
+}
+
+// 메인 페이지 컴포넌트
+export default function KakaoCallbackPage() {
+  return (
+    <Suspense fallback={<LoadingComponent />}>
+      <KakaoCallbackContent />
+    </Suspense>
   );
 }

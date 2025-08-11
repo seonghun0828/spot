@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { MapPin, RefreshCw, Navigation, Bell, User } from 'lucide-react';
 import BottomNavigation from './components/BottomNavigation';
+import { useCallback } from 'react';
 
 // 임시 데이터 타입 정의
 interface Post {
@@ -68,46 +69,42 @@ export default function HomePage() {
   >('loading');
 
   // 위도경도를 주소로 변환하는 함수
-  const reverseGeocode = async (
-    lat: number,
-    lng: number
-  ): Promise<string | undefined> => {
-    try {
-      // 카카오 지도 API를 사용한 역지오코딩
-      const response = await fetch(
-        `https://dapi.kakao.com/v2/local/geo/coord2address.json?x=${lng}&y=${lat}`,
-        {
-          headers: {
-            Authorization: `KakaoAK ${process.env.NEXT_PUBLIC_KAKAO_API_KEY}`,
-          },
-        }
-      );
+  const reverseGeocode = useCallback(
+    async (lat: number, lng: number): Promise<string | undefined> => {
+      try {
+        // 카카오 지도 API를 사용한 역지오코딩
+        const response = await fetch(
+          `https://dapi.kakao.com/v2/local/geo/coord2address.json?x=${lng}&y=${lat}`,
+          {
+            headers: {
+              Authorization: `KakaoAK ${process.env.NEXT_PUBLIC_KAKAO_API_KEY}`,
+            },
+          }
+        );
 
-      if (!response.ok) {
-        console.warn('카카오 API 호출 실패, 기본 좌표만 사용');
+        if (!response.ok) {
+          console.warn('카카오 API 호출 실패, 기본 좌표만 사용');
+          return undefined;
+        }
+
+        const data = await response.json();
+
+        if (data.documents && data.documents.length > 0) {
+          const address = data.documents[0].address;
+          if (address && address.address_name) {
+            return address.address_name;
+          }
+        }
+        return undefined;
+      } catch (error) {
+        console.warn('주소 변환 실패:', error);
         return undefined;
       }
+    },
+    []
+  );
 
-      const data = await response.json();
-
-      if (data.documents && data.documents.length > 0) {
-        const address = data.documents[0].address;
-        if (address && address.address_name) {
-          return address.address_name;
-        }
-      }
-      return undefined;
-    } catch (error) {
-      console.warn('주소 변환 실패:', error);
-      return undefined;
-    }
-  };
-
-  useEffect(() => {
-    getCurrentLocation();
-  }, []);
-
-  const getCurrentLocation = async () => {
+  const getCurrentLocation = useCallback(async () => {
     setLocationStatus('loading');
     try {
       // 로컬 스토리지에서 기존 위치 정보 확인
@@ -210,7 +207,11 @@ export default function HomePage() {
       console.error('위치 정보 오류:', error);
       setLocationStatus('error');
     }
-  };
+  }, [reverseGeocode]);
+
+  useEffect(() => {
+    getCurrentLocation();
+  }, [getCurrentLocation]);
 
   // 두 지점 간의 거리 계산 (미터 단위)
   const calculateDistance = (
@@ -305,7 +306,7 @@ export default function HomePage() {
                       className="w-full text-left px-3 py-3 hover:bg-gray-50"
                     >
                       <div className="text-sm text-gray-900">
-                        내 포스트에 '관심 있어요'가 달렸어요
+                        내 포스트에 &apos;관심 있어요&apos;가 달렸어요
                       </div>
                       <div className="text-xs text-gray-500 mt-0.5">2분 전</div>
                     </button>
