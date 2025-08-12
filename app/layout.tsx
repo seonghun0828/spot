@@ -4,6 +4,8 @@ import './globals.css';
 import { GoogleTagManager } from '@next/third-parties/google';
 import FirebaseProvider from './providers/FirebaseProvider';
 import { AuthProvider } from './contexts/AuthContext';
+import { ToastProvider } from '@/contexts/ToastContext';
+import ToastContainer from '@/components/ToastContainer';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -40,7 +42,12 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <FirebaseProvider>
-          <AuthProvider>{children}</AuthProvider>
+          <AuthProvider>
+            <ToastProvider>
+              {children}
+              <ToastContainer />
+            </ToastProvider>
+          </AuthProvider>
         </FirebaseProvider>
       </body>
     </html>

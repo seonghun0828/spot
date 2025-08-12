@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { ArrowLeft, Plus, X } from 'lucide-react';
 import { useAuth } from '@/app/contexts/AuthContext';
 import { getUserData, updateUserData } from '@/lib/auth';
+import { useToast } from '@/contexts/ToastContext';
 
 // MVP: 이미지 업로드 기능 비활성화 (구글 프로필 이미지만 사용)
 // import {
@@ -18,6 +19,7 @@ export default function ProfileModifyPage() {
   // MVP: 이미지 업로드 기능 비활성화
   // const fileInputRef = useRef<HTMLInputElement>(null);
   const { user, loading } = useAuth();
+  const { success, error } = useToast();
 
   const [nickname, setNickname] = useState<string>('');
   const [profileImageUrl, setProfileImageUrl] = useState<string>('');
@@ -198,11 +200,11 @@ export default function ProfileModifyPage() {
         gender,
       });
 
-      alert('프로필이 수정되었습니다.');
+      success('프로필이 수정되었습니다! 🎉');
       router.push('/profile');
-    } catch (error) {
-      console.error('프로필 수정 오류:', error);
-      alert('프로필 수정 중 오류가 발생했습니다.');
+    } catch (saveError) {
+      console.error('프로필 수정 오류:', saveError);
+      error('프로필 수정 중 오류가 발생했습니다. 다시 시도해주세요.');
     } finally {
       setIsSaving(false);
     }
