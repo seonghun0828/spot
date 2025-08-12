@@ -8,6 +8,7 @@ import {
 } from 'firebase/auth';
 import { db } from './firebase';
 import { doc, setDoc, getDoc, updateDoc } from 'firebase/firestore';
+import { UserUpdateData } from '@/types/user';
 
 // 구글 로그인 후 사용자 정보 저장
 export const signInWithGoogle = async () => {
@@ -41,14 +42,15 @@ export const signInWithGoogle = async () => {
         result.user.uid
       );
     } else {
-      // 기존 사용자인 경우 마지막 로그인 시간만 업데이트
+      // 기존 사용자인 경우 로그인 시간 + 구글 프로필 이미지 동기화
       await updateDoc(userRef, {
+        profileImageUrl: result.user.photoURL || '', // 구글 이미지 동기화
         lastLoginAt: new Date(),
         updatedAt: new Date(),
       });
 
       console.log(
-        '기존 사용자 로그인 시간이 업데이트되었습니다:',
+        '기존 사용자 로그인 시간 및 프로필 이미지가 업데이트되었습니다:',
         result.user.uid
       );
     }
@@ -106,10 +108,7 @@ export const getUserData = async (uid: string) => {
 };
 
 // 사용자 정보 업데이트
-export const updateUserData = async (
-  uid: string,
-  data: Record<string, unknown>
-) => {
+export const updateUserData = async (uid: string, data: UserUpdateData) => {
   try {
     const userRef = doc(db, 'users', uid);
     await updateDoc(userRef, {

@@ -4,13 +4,40 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Edit3, LogOut } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { signOutUser } from '@/lib/auth';
+import { signOutUser, getUserData } from '@/lib/auth';
+import { PartialUserData, DisplayUser } from '@/types/user';
 
 export default function ProfilePage() {
   const router = useRouter();
   const { user, loading } = useAuth();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  // Firestore 사용자 데이터 상태
+  const [userData, setUserData] = useState<PartialUserData | null>(null);
+  const [isLoadingUserData, setIsLoadingUserData] = useState(true);
+
+  // 사용자 데이터 로드
+  useEffect(() => {
+    const loadUserData = async () => {
+      if (!user || loading) return;
+
+      try {
+        const firestoreUserData = await getUserData(user.uid);
+        console.log(
+          '🔍 Firestore에서 가져온 사용자 데이터:',
+          firestoreUserData
+        );
+        setUserData(firestoreUserData);
+      } catch (error) {
+        console.error('사용자 데이터 로드 오류:', error);
+      } finally {
+        setIsLoadingUserData(false);
+      }
+    };
+
+    loadUserData();
+  }, [user, loading]);
 
   // 로그인되지 않은 경우 로그인 페이지로 리다이렉트 (useEffect 사용)
   useEffect(() => {
@@ -20,7 +47,7 @@ export default function ProfilePage() {
   }, [user, loading, router]);
 
   // 로딩 중이거나 로그인되지 않은 경우 로딩 화면 표시
-  if (loading || !user) {
+  if (loading || !user || isLoadingUserData) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 text-center">
@@ -40,24 +67,33 @@ export default function ProfilePage() {
             </svg>
           </div>
           <h2 className="text-xl font-bold text-gray-900 mb-2">
-            {loading ? '로그인 상태 확인 중...' : '로그인이 필요합니다'}
+            {loading || isLoadingUserData
+              ? '프로필 정보 로드 중...'
+              : '로그인이 필요합니다'}
           </h2>
           <p className="text-gray-600">
-            {loading ? '잠시만 기다려주세요' : '로그인 페이지로 이동합니다'}
+            {loading || isLoadingUserData
+              ? '잠시만 기다려주세요'
+              : '로그인 페이지로 이동합니다'}
           </p>
         </div>
       </div>
     );
   }
 
-  // 임시 사용자 데이터 (백엔드 연동 전까지 플레이스홀더)
-  const mockUser = {
-    nickname: user.displayName || '사용자',
-    profileImageUrl: user.photoURL || '',
-    interests: ['야구', '카페', '네트워킹'],
-    age: 28,
-    gender: '남성',
+  // Firestore 데이터와 Firebase Auth 데이터 결합
+  const displayUser: DisplayUser = {
+    nickname: userData?.nickname || user.displayName || '사용자',
+    profileImageUrl: userData?.profileImageUrl || user.photoURL || '',
+    interests: userData?.interests || [],
+    age: userData?.age || null,
+    gender: userData?.gender || null,
+    email: user.email || '',
   };
+
+  console.log('🖼️ 최종 profileImageUrl:', displayUser.profileImageUrl);
+  console.log('🔍 userData?.profileImageUrl:', userData?.profileImageUrl);
+  console.log('🔍 user.photoURL:', user.photoURL);
 
   const handleBack = () => router.back();
   const handleEdit = () => router.push('/profile/modify');
@@ -108,30 +144,45 @@ export default function ProfilePage() {
                 onClick={handleEdit}
                 className="relative w-24 h-24 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center"
               >
-                {mockUser.profileImageUrl ? (
+                {displayUser.profileImageUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
-                    src={mockUser.profileImageUrl}
+                    src={displayUser.profileImageUrl}
                     alt="프로필"
                     className="w-full h-full object-cover"
+                    onLoad={() =>
+                      console.log(
+                        '✅ 이미지 로드 성공:',
+                        displayUser.profileImageUrl
+                      )
+                    }
+                    onError={(e) =>
+                      console.error(
+                        '❌ 이미지 로드 실패:',
+                        displayUser.profileImageUrl,
+                        e
+                      )
+                    }
                   />
                 ) : (
                   <span className="text-2xl font-bold text-white bg-gradient-to-br from-blue-500 to-purple-500 w-full h-full flex items-center justify-center">
-                    {mockUser.nickname.charAt(0)}
+                    {displayUser.nickname.charAt(0)}
                   </span>
                 )}
               </button>
 
               <div className="text-center">
                 <p className="text-xl font-bold text-gray-900">
-                  {mockUser.nickname}
+                  {displayUser.nickname}
                 </p>
-                <p className="text-sm text-gray-500 mt-1">{user.email}</p>
+                <p className="text-sm text-gray-500 mt-1">
+                  {displayUser.email}
+                </p>
               </div>
 
-              {mockUser.interests?.length > 0 && (
+              {displayUser.interests?.length > 0 && (
                 <div className="flex flex-wrap justify-center gap-2">
-                  {mockUser.interests.map((tag, idx) => (
+                  {displayUser.interests.map((tag: string, idx: number) => (
                     <span
                       key={`${tag}-${idx}`}
                       className="px-3 py-1 rounded-full text-sm bg-blue-100 text-blue-700"
@@ -143,8 +194,8 @@ export default function ProfilePage() {
               )}
 
               <div className="flex items-center gap-3 text-sm text-gray-600">
-                {mockUser.age ? <span>{mockUser.age}세</span> : null}
-                {mockUser.gender ? <span>{mockUser.gender}</span> : null}
+                {displayUser.age ? <span>{displayUser.age}세</span> : null}
+                {displayUser.gender ? <span>{displayUser.gender}</span> : null}
               </div>
             </div>
           </section>
