@@ -7,7 +7,7 @@ import {
   User,
 } from 'firebase/auth';
 import { db } from './firebase';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc, updateDoc } from 'firebase/firestore';
 
 // 구글 로그인 후 사용자 정보 저장
 export const signInWithGoogle = async () => {
@@ -24,11 +24,33 @@ export const signInWithGoogle = async () => {
       await setDoc(userRef, {
         uid: result.user.uid,
         email: result.user.email,
-        displayName: result.user.displayName,
-        photoURL: result.user.photoURL,
+        nickname: result.user.displayName || '사용자',
+        profileImageUrl: result.user.photoURL || '',
+        interests: [], // 빈 배열로 시작
+        age: null,
+        gender: null,
+        location: null,
+        fcmTokens: [], // 푸시 알림 토큰 배열
         createdAt: new Date(),
         updatedAt: new Date(),
+        lastLoginAt: new Date(),
       });
+
+      console.log(
+        '새 사용자 정보가 Firestore에 저장되었습니다:',
+        result.user.uid
+      );
+    } else {
+      // 기존 사용자인 경우 마지막 로그인 시간만 업데이트
+      await updateDoc(userRef, {
+        lastLoginAt: new Date(),
+        updatedAt: new Date(),
+      });
+
+      console.log(
+        '기존 사용자 로그인 시간이 업데이트되었습니다:',
+        result.user.uid
+      );
     }
 
     return result.user;
@@ -64,4 +86,40 @@ export const signOutUser = async () => {
 // 인증 상태 변경 리스너
 export const onAuthStateChange = (callback: (user: User | null) => void) => {
   return onAuthStateChanged(auth, callback);
+};
+
+// 사용자 정보 가져오기
+export const getUserData = async (uid: string) => {
+  try {
+    const userRef = doc(db, 'users', uid);
+    const userDoc = await getDoc(userRef);
+
+    if (userDoc.exists()) {
+      return userDoc.data();
+    } else {
+      return null;
+    }
+  } catch (error) {
+    console.error('사용자 정보 가져오기 오류:', error);
+    return null;
+  }
+};
+
+// 사용자 정보 업데이트
+export const updateUserData = async (
+  uid: string,
+  data: Record<string, unknown>
+) => {
+  try {
+    const userRef = doc(db, 'users', uid);
+    await updateDoc(userRef, {
+      ...data,
+      updatedAt: new Date(),
+    });
+
+    console.log('사용자 정보가 업데이트되었습니다:', uid);
+  } catch (error) {
+    console.error('사용자 정보 업데이트 오류:', error);
+    throw error;
+  }
 };
