@@ -35,3 +35,39 @@ export interface DisplayUser {
   gender: string | null;
   email: string;
 }
+
+// 포스트 데이터 타입
+export interface PostData {
+  id: string;
+  authorId: string;
+  authorNickname: string;
+  authorProfileImageUrl: string;
+  title: string;
+  content: string;
+  tags: string[];
+  location: {
+    latitude: number;
+    longitude: number;
+    address: string;
+  };
+  maxParticipants: number;
+  currentParticipants: number;
+  participantIds: string[];
+  meetingTime: Timestamp;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+  isActive: boolean;
+  // MVP: 이미지 관련 필드 주석 처리
+  // images?: string[];
+}
+
+// 포스트 생성용 타입 (id, timestamps, participant 관련 제외)
+export type PostCreateData = Omit<
+  PostData,
+  'id' | 'createdAt' | 'updatedAt' | 'currentParticipants' | 'participantIds'
+>;
+
+// 포스트 업데이트용 타입
+export type PostUpdateData = Partial<
+  Omit<PostData, 'id' | 'authorId' | 'createdAt'>
+>;

@@ -1,30 +1,69 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { ArrowLeft, X, Upload } from 'lucide-react';
 import BottomNavigation from '../../components/BottomNavigation';
+import { useAuth } from '@/app/contexts/AuthContext';
+import { useToast } from '@/contexts/ToastContext';
+import { createPost } from '@/lib/posts';
+import { getUserData } from '@/lib/auth';
+import { PostCreateData } from '@/types/user';
+import { Timestamp } from 'firebase/firestore';
 
 interface PostFormData {
   title: string;
   content: string;
-  image?: File;
+  // MVP: 이미지 업로드 기능 비활성화
+  // image?: File;
   maxParticipants: string;
+  tags: string[];
+  meetingDate: string;
+  meetingTime: string;
 }
 
 export default function CreatePostPage() {
   const router = useRouter();
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  // MVP: 이미지 업로드 기능 비활성화
+  // const fileInputRef = useRef<HTMLInputElement>(null);
+  const { user, loading } = useAuth();
+  const { success, error } = useToast();
 
   const [formData, setFormData] = useState<PostFormData>({
     title: '',
     content: '',
     maxParticipants: '2~3명',
+    tags: [],
+    meetingDate: '',
+    meetingTime: '',
   });
 
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [newTag, setNewTag] = useState('');
+  // MVP: 이미지 업로드 기능 비활성화
+  // const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [userData, setUserData] = useState<any>(null);
+
+  // 로그인 체크 및 사용자 데이터 로드
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push('/login');
+      return;
+    }
+
+    if (user) {
+      const loadUserData = async () => {
+        try {
+          const data = await getUserData(user.uid);
+          setUserData(data);
+        } catch (err) {
+          console.error('사용자 데이터 로드 오류:', err);
+        }
+      };
+      loadUserData();
+    }
+  }, [user, loading, router]);
 
   const handleBack = () => {
     router.back();
@@ -104,17 +143,45 @@ export default function CreatePostPage() {
     setIsSubmitting(true);
 
     try {
-      // TODO: 실제 API 호출로 교체
-      console.log('포스트 생성 데이터:', formData);
+      if (!user || !userData) {
+        alert('로그인 정보를 확인할 수 없습니다.');
+        return;
+      }
 
-      // 임시로 1초 대기 후 성공 처리
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      // 현재 시간에서 1시간 후를 기본 모임 시간으로 설정 (임시)
+      const defaultMeetingTime = new Date();
+      defaultMeetingTime.setHours(defaultMeetingTime.getHours() + 1);
 
-      // 성공 시 해당 포스트 상세 페이지로 이동 (임시로 ID 1 사용)
-      router.push('/posts/1');
-    } catch (error) {
-      console.error('포스트 생성 실패:', error);
-      alert('포스트 생성에 실패했습니다. 다시 시도해주세요.');
+      // 최대 참가자 수 숫자로 변환
+      const maxParticipants =
+        parseInt(formData.maxParticipants.replace(/[^0-9]/g, '')) || 2;
+
+      const postData: PostCreateData = {
+        authorId: user.uid,
+        authorNickname: userData.nickname || user.displayName || '사용자',
+        authorProfileImageUrl: userData.profileImageUrl || user.photoURL || '',
+        title: formData.title.trim(),
+        content: formData.content.trim(),
+        tags: formData.tags || [],
+        location: {
+          // TODO: 실제 위치 정보 구현 필요
+          latitude: 37.5665,
+          longitude: 126.978,
+          address: '서울시 중구 명동',
+        },
+        maxParticipants,
+        meetingTime: Timestamp.fromDate(defaultMeetingTime),
+        isActive: true,
+      };
+
+      console.log('포스트 생성 데이터:', postData);
+      const postId = await createPost(postData);
+
+      success('포스트가 성공적으로 생성되었습니다! 🎉');
+      router.push('/');
+    } catch (submitError) {
+      console.error('포스트 생성 실패:', submitError);
+      error('포스트 생성에 실패했습니다. 다시 시도해주세요.');
     } finally {
       setIsSubmitting(false);
     }
@@ -198,7 +265,7 @@ export default function CreatePostPage() {
               </div>
             </div>
 
-            {/* 사진 업로드 */}
+            {/* MVP: 사진 업로드 기능 비활성화
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 사진 (선택)
@@ -244,6 +311,7 @@ export default function CreatePostPage() {
                 className="hidden"
               />
             </div>
+            */}
 
             {/* 희망 인원 선택 */}
             <div>
