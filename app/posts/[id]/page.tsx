@@ -3,14 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Image from 'next/image';
-import {
-  ArrowLeft,
-  MapPin,
-  Clock,
-  Share2,
-  MoreHorizontal,
-  Users,
-} from 'lucide-react';
+import { ArrowLeft, MapPin, Clock, Share2, Users } from 'lucide-react';
 import BottomNavigation from '../../components/BottomNavigation';
 import { useAuth } from '@/app/contexts/AuthContext';
 import { useToast } from '@/contexts/ToastContext';
