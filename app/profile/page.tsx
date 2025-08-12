@@ -195,7 +195,9 @@ export default function ProfilePage() {
 
               <div className="flex items-center gap-3 text-sm text-gray-600">
                 {displayUser.age ? <span>{displayUser.age}세</span> : null}
-                {displayUser.gender ? <span>{displayUser.gender}</span> : null}
+                {displayUser.gender && displayUser.gender !== '선택안함' ? (
+                  <span>{displayUser.gender}</span>
+                ) : null}
               </div>
             </div>
           </section>
