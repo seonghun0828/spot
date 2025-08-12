@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Spot - 게시글 발견 & 작성</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #f8f9fa;
+        --surface: #fff;
+        --primary: #ff6b00;
+        --primary-light: #fff3e6;
+        --secondary: #f1f3f5;
+        --border: #e5e7eb;
+        --text-primary: #222;
+        --text-secondary: #888;
+        --accent: #ff6b00;
+        --icon: #b0b0b0;
+        --notification: #ff3b30;
+        --radius-card: 16px;
+        --radius-input: 12px;
+        --radius-btn: 12px;
+        --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.04);
+        --font: 'Pretendard', 'Apple SD Gothic Neo', sans-serif;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        font-family: var(--font);
+        color: var(--text-primary);
+        min-height: 100vh;
+      }
+      .header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        height: 56px;
+        background: var(--surface);
+        border-bottom: 1px solid var(--border);
+        padding: 0 20px;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+      }
+      .header .logo {
+        font-weight: 700;
+        font-size: 1.25rem;
+        letter-spacing: -1px;
+      }
+      .header .location {
+        font-size: 0.95rem;
+        color: var(--text-secondary);
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      }
+      .feed {
+        padding: 20px 16px 100px 16px;
+        max-width: 480px;
+        margin: 0 auto;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+      }
+      .card {
+        background: var(--surface);
+        border-radius: var(--radius-card);
+        box-shadow: var(--shadow-card);
+        border: 1px solid var(--secondary);
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        position: relative;
+      }
+      .card-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .avatar {
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 1.5px solid var(--border);
+      }
+      .user-info {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+      .user-name {
+        font-weight: 500;
+        font-size: 1rem;
+      }
+      .user-desc {
+        font-size: 0.92rem;
+        color: var(--text-secondary);
+      }
+      .card-body {
+        font-size: 1.08rem;
+        font-weight: 500;
+        color: var(--text-primary);
+        word-break: break-all;
+      }
+      .card-meta {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 0.92rem;
+        color: var(--text-secondary);
+      }
+      .dot {
+        width: 4px;
+        height: 4px;
+        background: var(--border);
+        border-radius: 50%;
+        display: inline-block;
+      }
+      .card-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 2px;
+      }
+      .like-btn {
+        background: #f5f5f5;
+        color: #b0b0b0;
+        border: none;
+        border-radius: 8px;
+        padding: 6px 14px;
+        font-size: 1rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: background 0.2s, color 0.2s;
+      }
+      .like-btn.liked {
+        background: var(--primary);
+        color: #fff;
+      }
+      .like-btn svg {
+        width: 20px;
+        height: 20px;
+        fill: currentColor;
+        margin-right: 2px;
+      }
+      .fab {
+        position: fixed;
+        right: 24px;
+        bottom: 32px;
+        z-index: 20;
+        background: var(--primary);
+        color: #fff;
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        box-shadow: 0 4px 16px rgba(255, 107, 0, 0.12);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2rem;
+        border: none;
+        cursor: pointer;
+        transition: background 0.2s;
+      }
+      .fab:active {
+        background: #e65a00;
+      }
+      /* 모달 */
+      .modal-bg {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.18);
+        z-index: 100;
+        display: flex;
+        align-items: flex-end;
+        justify-content: center;
+      }
+      .modal {
+        background: var(--surface);
+        border-radius: 20px 20px 0 0;
+        box-shadow: 0 -2px 16px rgba(0, 0, 0, 0.08);
+        width: 100%;
+        max-width: 480px;
+        padding: 28px 20px 20px 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+        animation: modalUp 0.2s;
+      }
+      @keyframes modalUp {
+        from {
+          transform: translateY(100%);
+        }
+        to {
+          transform: translateY(0);
+        }
+      }
+      .modal-title {
+        font-size: 1.15rem;
+        font-weight: 600;
+        margin-bottom: 2px;
+      }
+      .modal input,
+      .modal textarea {
+        width: 100%;
+        border: none;
+        background: var(--secondary);
+        border-radius: var(--radius-input);
+        padding: 14px 12px;
+        font-size: 1rem;
+        color: var(--text-primary);
+        margin-bottom: 2px;
+        outline: none;
+        resize: none;
+        box-sizing: border-box;
+      }
+      .modal .desc {
+        font-size: 0.92rem;
+        color: var(--text-secondary);
+        margin-bottom: 2px;
+      }
+      .modal .actions {
+        display: flex;
+        gap: 10px;
+        margin-top: 6px;
+      }
+      .modal .actions button {
+        flex: 1;
+        padding: 12px 0;
+        border-radius: var(--radius-btn);
+        border: none;
+        font-size: 1rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: background 0.2s;
+      }
+      .modal .actions .cancel {
+        background: var(--secondary);
+        color: var(--text-secondary);
+      }
+      .modal .actions .submit {
+        background: var(--primary);
+        color: #fff;
+      }
+      @media (max-width: 600px) {
+        .feed,
+        .modal {
+          max-width: 100vw;
+        }
+        .header,
+        .modal {
+          padding-left: 12px;
+          padding-right: 12px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <span class="logo">Spot</span>
+      <span class="location">
+        <svg
+          width="18"
+          height="18"
+          fill="none"
+          stroke="#FF6B00"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <circle cx="9" cy="9" r="7" />
+          <circle cx="9" cy="9" r="2.5" />
+        </svg>
+        서울 잠실야구장
+      </span>
+    </div>
+    <div class="feed" id="feed">
+      <!-- 게시글 카드 예시 -->
+    </div>
+    <button class="fab" id="openModal" aria-label="새 게시글 작성">
+      <svg
+        width="28"
+        height="28"
+        fill="none"
+        stroke="white"
+        stroke-width="3"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <line x1="14" y1="6" x2="14" y2="22" />
+        <line x1="6" y1="14" x2="22" y2="14" />
+      </svg>
+    </button>
+    <!-- 모달 -->
+    <div class="modal-bg" id="modalBg" style="display: none">
+      <form class="modal" id="postForm">
+        <div class="modal-title">새 게시글 작성</div>
+        <textarea
+          id="postMsg"
+          maxlength="60"
+          rows="3"
+          placeholder="예: 같이 응원할 분!"
+        ></textarea>
+        <div class="desc">게시글은 1시간 후 자동 만료됩니다.</div>
+        <div class="actions">
+          <button type="button" class="cancel" id="closeModal">취소</button>
+          <button type="submit" class="submit">게시</button>
+        </div>
+      </form>
+    </div>
+    <script>
+      // 예시 데이터
+      const posts = [
+        {
+          id: 1,
+          user: {
+            name: '김스팟',
+            desc: '야구 덕후',
+            avatar: 'https://randomuser.me/api/portraits/men/32.jpg',
+          },
+          msg: '같이 응원할 분!',
+          distance: '100m 이내',
+          time: 45, // 남은 분
+          liked: true,
+        },
+        {
+          id: 2,
+          user: {
+            name: '이응원',
+            desc: '롯데팬',
+            avatar: 'https://randomuser.me/api/portraits/men/45.jpg',
+          },
+          msg: '경기 끝나고 치킨 드실 분?',
+          distance: '300m 이내',
+          time: 10,
+          liked: false,
+        },
+      ];
+      function renderFeed() {
+        const feed = document.getElementById('feed');
+        feed.innerHTML = '';
+        posts.forEach((post, idx) => {
+          feed.innerHTML += `
+        <div class="card">
+          <div class="card-header">
+            <img class="avatar" src="${post.user.avatar}" alt="프로필"/>
+            <div class="user-info">
+              <span class="user-name">${post.user.name}</span>
+              <span class="user-desc">${post.user.desc}</span>
+            </div>
+          </div>
+          <div class="card-body">${post.msg}</div>
+          <div class="card-meta">
+            <span>${post.distance}</span>
+            <span class="dot"></span>
+            <span>${post.time > 0 ? post.time + '분 남음' : '방금 전'}</span>
+          </div>
+          <div class="card-actions">
+            <button class="like-btn${
+              post.liked ? ' liked' : ''
+            }" onclick="toggleLike(${idx})">
+              <svg viewBox="0 0 24 24"><path d="M12 21C12 21 4 13.36 4 8.5C4 5.42 6.42 3 9.5 3C11.24 3 12.91 3.81 14 5.08C15.09 3.81 16.76 3 18.5 3C21.58 3 24 5.42 24 8.5C24 13.36 16 21 16 21H12Z"/></svg>
+              흥미 있어요
+            </button>
+          </div>
+        </div>
+        `;
+        });
+      }
+      window.toggleLike = function (idx) {
+        posts[idx].liked = !posts[idx].liked;
+        renderFeed();
+      };
+      // 모달
+      const openModal = document.getElementById('openModal');
+      const closeModal = document.getElementById('closeModal');
+      const modalBg = document.getElementById('modalBg');
+      openModal.onclick = () => {
+        modalBg.style.display = 'flex';
+        document.getElementById('postMsg').focus();
+      };
+      closeModal.onclick = () => {
+        modalBg.style.display = 'none';
+      };
+      modalBg.onclick = (e) => {
+        if (e.target === modalBg) modalBg.style.display = 'none';
+      };
+      // 게시글 작성
+      document.getElementById('postForm').onsubmit = function (e) {
+        e.preventDefault();
+        const msg = document.getElementById('postMsg').value.trim();
+        if (!msg) return alert('내용을 입력해주세요!');
+        posts.unshift({
+          id: Date.now(),
+          user: {
+            name: '나',
+            desc: '스팟 유저',
+            avatar: 'https://randomuser.me/api/portraits/men/99.jpg',
+          },
+          msg,
+          distance: '0m',
+          time: 60,
+          liked: false,
+        });
+        modalBg.style.display = 'none';
+        document.getElementById('postMsg').value = '';
+        renderFeed();
+      };
+      renderFeed();
+    </script>
+  </body>
+</html>

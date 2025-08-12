@@ -1,0 +1,150 @@
+{
+  "designSystem": {
+    "name": "Modern Minimal SNS UI",
+    "description": "심플하고 여백이 넉넉하며, 카드형 피드와 부드러운 라운드, 중립적이고 밝은 색상, 명확한 계층 구조를 가진 소셜 네트워크 스타일",
+    "colorPalette": {
+      "background": "#F8F9FA",
+      "surface": "#FFFFFF",
+      "primary": "#FF6B00",
+      "primaryLight": "#FFF3E6",
+      "secondary": "#F1F3F5",
+      "border": "#E5E7EB",
+      "textPrimary": "#222222",
+      "textSecondary": "#888888",
+      "accent": "#FF6B00",
+      "icon": "#B0B0B0",
+      "notification": "#FF3B30"
+    },
+    "typography": {
+      "fontFamily": "Pretendard, Apple SD Gothic Neo, sans-serif",
+      "fontWeight": {
+        "regular": 400,
+        "medium": 500,
+        "bold": 700
+      },
+      "heading": {
+        "size": "1.125rem ~ 1.5rem",
+        "weight": "bold",
+        "lineHeight": 1.3
+      },
+      "body": {
+        "size": "1rem",
+        "weight": "regular",
+        "lineHeight": 1.6
+      },
+      "caption": {
+        "size": "0.875rem",
+        "weight": "regular",
+        "lineHeight": 1.4
+      }
+    },
+    "radius": {
+      "card": "16px",
+      "input": "12px",
+      "button": "12px",
+      "avatar": "50%"
+    },
+    "shadow": {
+      "card": "0 2px 8px rgba(0,0,0,0.04)"
+    },
+    "structure": {
+      "header": {
+        "height": "56px",
+        "background": "#FFFFFF",
+        "borderBottom": "1px solid #E5E7EB",
+        "left": "logo, search input",
+        "right": "notification, menu"
+      },
+      "searchBar": {
+        "background": "#F1F3F5",
+        "radius": "12px",
+        "icon": "left",
+        "placeholder": "textSecondary"
+      },
+      "tabBar": {
+        "type": "segmented",
+        "background": "#F8F9FA",
+        "radius": "12px",
+        "active": {
+          "background": "#FFFFFF",
+          "color": "#222222",
+          "shadow": "0 1px 4px rgba(0,0,0,0.03)"
+        },
+        "inactive": {
+          "background": "transparent",
+          "color": "#888888"
+        }
+      },
+      "feed": {
+        "gap": "20px",
+        "card": {
+          "background": "#FFFFFF",
+          "radius": "16px",
+          "shadow": "card",
+          "padding": "20px",
+          "border": "1px solid #F1F3F5",
+          "header": {
+            "avatar": "left",
+            "name": "bold",
+            "role": "caption, gray",
+            "time": "caption, gray"
+          },
+          "body": {
+            "title": "heading",
+            "text": "body",
+            "image": {
+              "radius": "12px",
+              "size": "72x72px",
+              "align": "right"
+            }
+          },
+          "footer": {
+            "actions": ["like", "comment", "share"],
+            "iconColor": "#B0B0B0",
+            "iconActiveColor": "#FF6B00",
+            "gap": "12px"
+          },
+          "tag": {
+            "background": "#FFF3E6",
+            "color": "#FF6B00",
+            "radius": "8px",
+            "fontSize": "0.875rem"
+          }
+        }
+      },
+      "inputArea": {
+        "background": "#FFFFFF",
+        "radius": "16px",
+        "padding": "16px",
+        "input": {
+          "background": "#F1F3F5",
+          "radius": "12px",
+          "fontSize": "1rem",
+          "color": "#222222"
+        },
+        "button": {
+          "background": "#E5E7EB",
+          "color": "#888888",
+          "radius": "12px",
+          "fontWeight": "medium"
+        }
+      }
+    },
+    "iconography": {
+      "style": "Line, minimal, rounded",
+      "size": "20~24px",
+      "color": "#B0B0B0",
+      "activeColor": "#FF6B00"
+    },
+    "spacing": {
+      "pagePadding": "20px",
+      "sectionGap": "32px",
+      "cardGap": "20px",
+      "elementGap": "8~16px"
+    },
+    "animation": {
+      "button": "background/opacity transition 0.2s",
+      "card": "hover shadow transition 0.2s"
+    }
+  }
+}

@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Spot - 채팅방</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #f8f9fa;
+        --surface: #fff;
+        --primary: #ff6b00;
+        --primary-light: #fff3e6;
+        --secondary: #f1f3f5;
+        --border: #e5e7eb;
+        --text-primary: #222;
+        --text-secondary: #888;
+        --accent: #ff6b00;
+        --icon: #b0b0b0;
+        --radius-card: 16px;
+        --radius-btn: 12px;
+        --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.04);
+        --font: 'Pretendard', 'Apple SD Gothic Neo', sans-serif;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        font-family: var(--font);
+        color: var(--text-primary);
+        min-height: 100vh;
+      }
+      .chat-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        height: 56px;
+        background: var(--surface);
+        border-bottom: 1px solid var(--border);
+        padding: 0 20px;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+      }
+      .chat-title {
+        font-weight: 700;
+        font-size: 1.1rem;
+        letter-spacing: -1px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .chat-count {
+        font-size: 0.95rem;
+        color: var(--text-secondary);
+        background: var(--secondary);
+        border-radius: 8px;
+        padding: 2px 10px;
+        font-weight: 500;
+      }
+      .chat-header .plus-btn {
+        background: var(--primary-light);
+        border: none;
+        border-radius: 8px;
+        width: 36px;
+        height: 36px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: background 0.2s;
+      }
+      .chat-header .plus-btn:active {
+        background: #ffe0c2;
+      }
+      .chat-main {
+        max-width: 480px;
+        margin: 0 auto;
+        padding: 16px 16px 90px 16px;
+        min-height: 60vh;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .msg-row {
+        display: flex;
+        align-items: flex-end;
+        gap: 8px;
+      }
+      .msg-row.me {
+        flex-direction: row-reverse;
+      }
+      .msg-bubble {
+        background: var(--surface);
+        border-radius: 16px 16px 16px 4px;
+        box-shadow: var(--shadow-card);
+        border: 1px solid var(--secondary);
+        padding: 12px 16px 10px 16px;
+        max-width: 70vw;
+        min-width: 44px;
+        font-size: 1.05rem;
+        font-weight: 500;
+        word-break: break-word;
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .msg-row.me .msg-bubble {
+        background: var(--primary);
+        color: #fff;
+        border: none;
+        border-radius: 16px 16px 4px 16px;
+        align-items: flex-end;
+      }
+      .msg-meta {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.85rem;
+        color: var(--text-secondary);
+        margin-top: 2px;
+      }
+      .msg-row.me .msg-meta {
+        color: #ffe0c2;
+      }
+      .msg-avatar {
+        width: 34px;
+        height: 34px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 1.5px solid var(--border);
+      }
+      .msg-nick {
+        font-size: 0.92rem;
+        font-weight: 500;
+        color: var(--text-secondary);
+      }
+      .msg-row.me .msg-nick {
+        color: #ffe0c2;
+      }
+      .chat-input-bar {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        width: 100vw;
+        max-width: 480px;
+        margin: 0 auto;
+        background: var(--surface);
+        border-top: 1px solid var(--border);
+        box-sizing: border-box;
+        padding: 12px 16px;
+        z-index: 20;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .chat-input-bar input {
+        flex: 1;
+        background: var(--secondary);
+        border: none;
+        border-radius: 12px;
+        padding: 12px 14px;
+        font-size: 1rem;
+        color: var(--text-primary);
+        outline: none;
+      }
+      .chat-input-bar button {
+        background: var(--primary);
+        color: #fff;
+        border: none;
+        border-radius: 12px;
+        font-size: 1.1rem;
+        font-weight: 600;
+        padding: 0 18px;
+        height: 44px;
+        cursor: pointer;
+        transition: background 0.2s;
+      }
+      .chat-input-bar button:active {
+        background: #e65a00;
+      }
+      /* 약속 제안 모달 */
+      .modal-bg {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.18);
+        z-index: 100;
+        display: flex;
+        align-items: flex-end;
+        justify-content: center;
+      }
+      .modal {
+        background: var(--surface);
+        border-radius: 20px 20px 0 0;
+        box-shadow: 0 -2px 16px rgba(0, 0, 0, 0.08);
+        width: 100%;
+        max-width: 480px;
+        padding: 28px 20px 20px 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+        animation: modalUp 0.2s;
+      }
+      @keyframes modalUp {
+        from {
+          transform: translateY(100%);
+        }
+        to {
+          transform: translateY(0);
+        }
+      }
+      .modal-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin-bottom: 2px;
+      }
+      .modal .desc {
+        font-size: 0.95rem;
+        color: var(--text-secondary);
+        margin-bottom: 2px;
+      }
+      .modal .actions {
+        display: flex;
+        gap: 10px;
+        margin-top: 6px;
+      }
+      .modal .actions button {
+        flex: 1;
+        padding: 12px 0;
+        border-radius: var(--radius-btn);
+        border: none;
+        font-size: 1rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: background 0.2s;
+      }
+      .modal .actions .cancel {
+        background: var(--secondary);
+        color: var(--text-secondary);
+      }
+      .modal .actions .submit {
+        background: var(--primary);
+        color: #fff;
+      }
+      @media (max-width: 600px) {
+        .chat-main,
+        .modal {
+          max-width: 100vw;
+        }
+        .chat-header,
+        .modal {
+          padding-left: 12px;
+          padding-right: 12px;
+        }
+        .chat-input-bar {
+          max-width: 100vw;
+          padding-left: 12px;
+          padding-right: 12px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="chat-header">
+      <span class="chat-title">
+        지금 한화 경기
+        <span class="chat-count">4명</span>
+      </span>
+      <button class="plus-btn" id="openModal" aria-label="약속 제안">
+        <svg
+          width="22"
+          height="22"
+          fill="none"
+          stroke="#FF6B00"
+          stroke-width="3"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <line x1="11" y1="5" x2="11" y2="17" />
+          <line x1="5" y1="11" x2="17" y2="11" />
+        </svg>
+      </button>
+    </div>
+    <div class="chat-main" id="chatMain">
+      <!-- 메시지 목록이 JS로 렌더링됩니다 -->
+    </div>
+    <form class="chat-input-bar" id="chatForm" autocomplete="off">
+      <input
+        type="text"
+        id="chatInput"
+        maxlength="100"
+        placeholder="메시지를 입력하세요"
+      />
+      <button type="submit">전송</button>
+    </form>
+    <!-- 약속 제안 모달 -->
+    <div class="modal-bg" id="modalBg" style="display: none">
+      <form class="modal" id="promiseForm">
+        <div class="modal-title">약속 제안</div>
+        <div class="desc">경기 이후 만남을 제안해보세요!</div>
+        <input
+          type="text"
+          id="promisePlace"
+          maxlength="30"
+          placeholder="장소 (예: OO역 근처 펍)"
+          style="margin-bottom: 8px"
+        />
+        <input
+          type="text"
+          id="promiseTime"
+          maxlength="20"
+          placeholder="시간 (예: 9시 30분)"
+        />
+        <div class="actions">
+          <button type="button" class="cancel" id="closeModal">취소</button>
+          <button type="submit" class="submit">제안</button>
+        </div>
+      </form>
+    </div>
+    <script>
+      // 예시 채팅 데이터
+      const me = {
+        name: '나',
+        avatar: 'https://randomuser.me/api/portraits/men/99.jpg',
+      };
+      const users = [
+        {
+          name: '김스팟',
+          avatar: 'https://randomuser.me/api/portraits/men/32.jpg',
+        },
+        {
+          name: '최치맥',
+          avatar: 'https://randomuser.me/api/portraits/women/22.jpg',
+        },
+        {
+          name: '이야구',
+          avatar: 'https://randomuser.me/api/portraits/men/42.jpg',
+        },
+        me,
+      ];
+      let messages = [
+        {
+          user: users[0],
+          text: '오늘 경기 진짜 재밌네요!!! ㅋㅋㅋ',
+          time: '20:10',
+        },
+        {
+          user: users[1],
+          text: '야금야금 따라가더니 결국 역전을 하네요. 진짜 소름...',
+          time: '20:11',
+        },
+        {
+          user: users[2],
+          text: '혹시 경기 끝나고 한잔 하실 분?',
+          time: '20:12',
+        },
+        { user: me, text: '좋아요! OO역 근처 펍 어떠세요?', time: '20:13' },
+      ];
+      function renderChat() {
+        const main = document.getElementById('chatMain');
+        main.innerHTML = '';
+        messages.forEach((msg) => {
+          const isMe = msg.user.name === me.name;
+          main.innerHTML += `
+          <div class="msg-row${isMe ? ' me' : ''}">
+            <img class="msg-avatar" src="${msg.user.avatar}" alt="프로필"/>
+            <div class="msg-bubble">
+              <div>${msg.text}</div>
+              <div class="msg-meta">
+                <span class="msg-nick">${msg.user.name}</span>
+                <span>${msg.time}</span>
+              </div>
+            </div>
+          </div>
+        `;
+        });
+        main.scrollTop = main.scrollHeight;
+      }
+      // 메시지 전송
+      document.getElementById('chatForm').onsubmit = function (e) {
+        e.preventDefault();
+        const input = document.getElementById('chatInput');
+        const text = input.value.trim();
+        if (!text) return;
+        const now = new Date();
+        const time =
+          now.getHours().toString().padStart(2, '0') +
+          ':' +
+          now.getMinutes().toString().padStart(2, '0');
+        messages.push({ user: me, text, time });
+        input.value = '';
+        renderChat();
+      };
+      // 약속 제안 모달
+      const openModal = document.getElementById('openModal');
+      const closeModal = document.getElementById('closeModal');
+      const modalBg = document.getElementById('modalBg');
+      openModal.onclick = () => {
+        modalBg.style.display = 'flex';
+        document.getElementById('promisePlace').focus();
+      };
+      closeModal.onclick = () => {
+        modalBg.style.display = 'none';
+      };
+      modalBg.onclick = (e) => {
+        if (e.target === modalBg) modalBg.style.display = 'none';
+      };
+      // 약속 제안 제출
+      document.getElementById('promiseForm').onsubmit = function (e) {
+        e.preventDefault();
+        const place = document.getElementById('promisePlace').value.trim();
+        const time = document.getElementById('promiseTime').value.trim();
+        if (!place && !time) return;
+        let text = '[약속 제안] ';
+        if (place) text += place;
+        if (place && time) text += ', ';
+        if (time) text += time;
+        const now = new Date();
+        const t =
+          now.getHours().toString().padStart(2, '0') +
+          ':' +
+          now.getMinutes().toString().padStart(2, '0');
+        messages.push({ user: me, text, time: t });
+        modalBg.style.display = 'none';
+        document.getElementById('promisePlace').value = '';
+        document.getElementById('promiseTime').value = '';
+        renderChat();
+      };
+      renderChat();
+    </script>
+  </body>
+</html>
