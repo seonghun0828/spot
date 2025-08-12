@@ -1,32 +1,24 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import Image from 'next/image';
-import { ArrowLeft, X, Upload } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import BottomNavigation from '../../components/BottomNavigation';
 import { useAuth } from '@/app/contexts/AuthContext';
 import { useToast } from '@/contexts/ToastContext';
 import { createPost } from '@/lib/posts';
 import { getUserData } from '@/lib/auth';
-import { PostCreateData } from '@/types/user';
+import { PostCreateData, PartialUserData } from '@/types/user';
 import { Timestamp } from 'firebase/firestore';
 
 interface PostFormData {
   title: string;
   content: string;
-  // MVP: 이미지 업로드 기능 비활성화
-  // image?: File;
   maxParticipants: string;
-  tags: string[];
-  meetingDate: string;
-  meetingTime: string;
 }
 
 export default function CreatePostPage() {
   const router = useRouter();
-  // MVP: 이미지 업로드 기능 비활성화
-  // const fileInputRef = useRef<HTMLInputElement>(null);
   const { user, loading } = useAuth();
   const { success, error } = useToast();
 
@@ -34,16 +26,14 @@ export default function CreatePostPage() {
     title: '',
     content: '',
     maxParticipants: '2~3명',
-    tags: [],
-    meetingDate: '',
-    meetingTime: '',
   });
-
-  const [newTag, setNewTag] = useState('');
-  // MVP: 이미지 업로드 기능 비활성화
-  // const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [userData, setUserData] = useState<any>(null);
+  const [userData, setUserData] = useState<PartialUserData | null>(null);
+  const [currentLocation, setCurrentLocation] = useState<{
+    latitude: number;
+    longitude: number;
+    address: string;
+  } | null>(null);
 
   // 로그인 체크 및 사용자 데이터 로드
   useEffect(() => {
@@ -65,6 +55,96 @@ export default function CreatePostPage() {
     }
   }, [user, loading, router]);
 
+  // 현재 위치 정보 가져오기
+  useEffect(() => {
+    const getCurrentLocation = async () => {
+      try {
+        // 로컬 스토리지에서 기존 위치 정보 확인
+        const storedLocationData = localStorage.getItem('spot_location_data');
+
+        if (storedLocationData) {
+          try {
+            const stored = JSON.parse(storedLocationData);
+            const now = Date.now();
+            const timeDiff = now - stored.timestamp;
+
+            // 30분 이내의 데이터이고 주소가 있으면 사용
+            if (timeDiff < 30 * 60 * 1000 && stored.address) {
+              setCurrentLocation({
+                latitude: stored.lat,
+                longitude: stored.lng,
+                address: stored.address,
+              });
+              return;
+            }
+          } catch (error) {
+            console.warn('로컬 스토리지 데이터 파싱 실패:', error);
+          }
+        }
+
+        // 새로운 위치 정보 가져오기
+        const position = await new Promise<GeolocationPosition>(
+          (resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(resolve, reject, {
+              timeout: 10000,
+              enableHighAccuracy: false,
+              maximumAge: 60000,
+            });
+          }
+        );
+
+        const lat = position.coords.latitude;
+        const lng = position.coords.longitude;
+
+        // 카카오 지도 API로 주소 변환
+        const response = await fetch(
+          `https://dapi.kakao.com/v2/local/geo/coord2address.json?x=${lng}&y=${lat}`,
+          {
+            headers: {
+              Authorization: `KakaoAK ${process.env.NEXT_PUBLIC_KAKAO_API_KEY}`,
+            },
+          }
+        );
+
+        let address = '위치 정보 없음';
+        if (response.ok) {
+          const data = await response.json();
+          if (data.documents && data.documents.length > 0) {
+            address =
+              data.documents[0].address?.address_name || '위치 정보 없음';
+          }
+        }
+
+        setCurrentLocation({
+          latitude: lat,
+          longitude: lng,
+          address,
+        });
+
+        // 로컬 스토리지에 저장
+        localStorage.setItem(
+          'spot_location_data',
+          JSON.stringify({
+            lat,
+            lng,
+            address,
+            timestamp: Date.now(),
+          })
+        );
+      } catch (error) {
+        console.error('위치 정보 가져오기 실패:', error);
+        // 기본값으로 설정
+        setCurrentLocation({
+          latitude: 37.5665,
+          longitude: 126.978,
+          address: '위치를 가져올 수 없습니다',
+        });
+      }
+    };
+
+    getCurrentLocation();
+  }, []);
+
   const handleBack = () => {
     router.back();
   };
@@ -76,67 +156,27 @@ export default function CreatePostPage() {
     }));
   };
 
-  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      // 파일 크기 체크 (5MB 제한)
-      if (file.size > 5 * 1024 * 1024) {
-        alert('파일 크기는 5MB 이하여야 합니다.');
-        return;
-      }
-
-      // 이미지 파일 타입 체크
-      if (!file.type.startsWith('image/')) {
-        alert('이미지 파일만 업로드 가능합니다.');
-        return;
-      }
-
-      setFormData((prev) => ({
-        ...prev,
-        image: file,
-      }));
-
-      // 미리보기 생성
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setImagePreview(e.target?.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const removeImage = () => {
-    setFormData((prev) => ({
-      ...prev,
-      image: undefined,
-    }));
-    setImagePreview(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     // 유효성 검사
     if (!formData.title.trim()) {
-      alert('제목을 입력해주세요.');
+      error('제목을 입력해주세요.');
       return;
     }
 
     if (!formData.content.trim()) {
-      alert('상세 설명을 입력해주세요.');
+      error('상세 설명을 입력해주세요.');
       return;
     }
 
     if (formData.title.length >= 50) {
-      alert('제목은 50자 이하여야 합니다.');
+      error('제목은 50자 이하여야 합니다.');
       return;
     }
 
     if (formData.content.length >= 1000) {
-      alert('상세 설명은 1000자 이하여야 합니다.');
+      error('상세 설명은 1000자 이하여야 합니다.');
       return;
     }
 
@@ -144,7 +184,8 @@ export default function CreatePostPage() {
 
     try {
       if (!user || !userData) {
-        alert('로그인 정보를 확인할 수 없습니다.');
+        error('로그인 정보를 확인할 수 없습니다.');
+        setIsSubmitting(false);
         return;
       }
 
@@ -152,9 +193,8 @@ export default function CreatePostPage() {
       const defaultMeetingTime = new Date();
       defaultMeetingTime.setHours(defaultMeetingTime.getHours() + 1);
 
-      // 최대 참가자 수 숫자로 변환
-      const maxParticipants =
-        parseInt(formData.maxParticipants.replace(/[^0-9]/g, '')) || 2;
+      // 희망 인원은 문자열 그대로 저장
+      const maxParticipants = formData.maxParticipants;
 
       const postData: PostCreateData = {
         authorId: user.uid,
@@ -162,12 +202,11 @@ export default function CreatePostPage() {
         authorProfileImageUrl: userData.profileImageUrl || user.photoURL || '',
         title: formData.title.trim(),
         content: formData.content.trim(),
-        tags: formData.tags || [],
-        location: {
-          // TODO: 실제 위치 정보 구현 필요
+        tags: [],
+        location: currentLocation || {
           latitude: 37.5665,
           longitude: 126.978,
-          address: '서울시 중구 명동',
+          address: '위치 정보 없음',
         },
         maxParticipants,
         meetingTime: Timestamp.fromDate(defaultMeetingTime),
@@ -175,7 +214,7 @@ export default function CreatePostPage() {
       };
 
       console.log('포스트 생성 데이터:', postData);
-      const postId = await createPost(postData);
+      await createPost(postData);
 
       success('포스트가 성공적으로 생성되었습니다! 🎉');
       router.push('/');

@@ -49,8 +49,9 @@ export interface PostData {
     latitude: number;
     longitude: number;
     address: string;
+    geohash?: string; // 위치 기반 쿼리용
   };
-  maxParticipants: number;
+  maxParticipants: string;
   currentParticipants: number;
   participantIds: string[];
   meetingTime: Timestamp;

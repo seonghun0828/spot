@@ -24,6 +24,14 @@ export const auth = getAuth(app);
 export const db = getFirestore(app);
 export const storage = getStorage(app);
 
+// 개발 환경에서 Firestore 설정 검증
+if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
+  console.log('🔥 Firebase 초기화 완료:', {
+    projectId: firebaseConfig.projectId,
+    authDomain: firebaseConfig.authDomain,
+  });
+}
+
 // Analytics는 클라이언트 사이드에서만 초기화
 let analytics;
 if (typeof window !== 'undefined') {
