@@ -292,3 +292,32 @@ export const getUserPosts = async (userId: string): Promise<PostData[]> => {
     return [];
   }
 };
+
+// 사용자가 관심 있어요 누른 포스트 목록 조회
+export const getUserInterestedPosts = async (
+  userId: string
+): Promise<PostData[]> => {
+  try {
+    const postsQuery = query(
+      collection(db, 'posts'),
+      where('interestedUserIds', 'array-contains', userId),
+      where('isActive', '==', true),
+      orderBy('createdAt', 'desc')
+    );
+
+    const querySnapshot = await getDocs(postsQuery);
+    const posts: PostData[] = [];
+
+    querySnapshot.forEach((doc) => {
+      posts.push({
+        id: doc.id,
+        ...doc.data(),
+      } as PostData);
+    });
+
+    return posts;
+  } catch (error) {
+    console.error('관심 포스트 목록 조회 오류:', error);
+    return [];
+  }
+};
