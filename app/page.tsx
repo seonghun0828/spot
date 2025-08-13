@@ -543,7 +543,7 @@ export default function HomePage() {
                     {/* 시간 및 관심 수 */}
                     <div className="flex items-center justify-between text-xs text-gray-400">
                       <span>{formatTimeAgo(post.createdAt)}</span>
-                      <span>관심 {post.currentParticipants}명</span>
+                      <span>관심 {post.interestedCount}명</span>
                     </div>
                   </div>
                 </div>

@@ -51,9 +51,9 @@ export interface PostData {
     address: string;
     geohash?: string; // 위치 기반 쿼리용
   };
-  maxParticipants: string;
-  currentParticipants: number;
-  participantIds: string[];
+  maxParticipants: string; // "2~3명", "제한 없음" 등
+  interestedCount: number; // 관심 있어요 누른 사람 수
+  interestedUserIds: string[]; // 관심 있어요 누른 사람들의 UID 목록
   meetingTime: Timestamp;
   createdAt: Timestamp;
   updatedAt: Timestamp;
@@ -62,13 +62,21 @@ export interface PostData {
   // images?: string[];
 }
 
-// 포스트 생성용 타입 (id, timestamps, participant 관련 제외)
+// 포스트 생성용 타입 (id, timestamps, interested 관련 제외)
 export type PostCreateData = Omit<
   PostData,
-  'id' | 'createdAt' | 'updatedAt' | 'currentParticipants' | 'participantIds'
+  'id' | 'createdAt' | 'updatedAt' | 'interestedCount' | 'interestedUserIds'
 >;
 
 // 포스트 업데이트용 타입
 export type PostUpdateData = Partial<
   Omit<PostData, 'id' | 'authorId' | 'createdAt'>
 >;
+
+// 관심 있어요 표시한 사용자 정보
+export interface InterestedUser {
+  uid: string;
+  nickname: string;
+  profileImageUrl: string;
+  interestedAt: Timestamp; // 관심 표시한 시간
+}

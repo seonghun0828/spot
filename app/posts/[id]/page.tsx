@@ -7,8 +7,8 @@ import { ArrowLeft, MapPin, Clock, Share2, Users } from 'lucide-react';
 import BottomNavigation from '../../components/BottomNavigation';
 import { useAuth } from '@/app/contexts/AuthContext';
 import { useToast } from '@/contexts/ToastContext';
-import { getPost } from '@/lib/posts';
-import { PostData } from '@/types/user';
+import { getPost, toggleInterest, getInterestedUsers } from '@/lib/posts';
+import { PostData, InterestedUser } from '@/types/user';
 import { Timestamp } from 'firebase/firestore';
 
 export default function PostDetailPage() {
@@ -21,6 +21,8 @@ export default function PostDetailPage() {
   const [post, setPost] = useState<PostData | null>(null);
   const [loading, setLoading] = useState(true);
   const [isInterested, setIsInterested] = useState(false);
+  const [interestedUsers, setInterestedUsers] = useState<InterestedUser[]>([]);
+  const [showInterestedList, setShowInterestedList] = useState(false);
 
   // 현재 위치 (거리 계산용)
   const [currentLocation, setCurrentLocation] = useState<{
@@ -37,7 +39,7 @@ export default function PostDetailPage() {
         if (postData) {
           setPost(postData);
           // 현재 사용자가 이미 관심 표시했는지 확인
-          if (user && postData.participantIds.includes(user.uid)) {
+          if (user && postData.interestedUserIds.includes(user.uid)) {
             setIsInterested(true);
           }
         } else {
@@ -113,14 +115,32 @@ export default function PostDetailPage() {
     if (!post) return;
 
     try {
-      // TODO: Firestore에 관심 표시 업데이트 로직 구현
-      // 현재는 UI만 업데이트
-      setIsInterested(!isInterested);
+      const newInterestState = !isInterested;
+      
+      // Firestore에 관심 표시 업데이트
+      await toggleInterest(post.id, user.uid, newInterestState);
+      
+      // UI 상태 업데이트
+      setIsInterested(newInterestState);
+      
+      // 포스트 데이터 업데이트
+      setPost(prev => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          interestedCount: newInterestState 
+            ? prev.interestedCount + 1 
+            : prev.interestedCount - 1,
+          interestedUserIds: newInterestState
+            ? [...prev.interestedUserIds, user.uid]
+            : prev.interestedUserIds.filter(id => id !== user.uid)
+        };
+      });
 
-      if (isInterested) {
-        success('관심 표시를 취소했습니다.');
-      } else {
+      if (newInterestState) {
         success('관심을 표시했습니다! 🙌');
+      } else {
+        success('관심 표시를 취소했습니다.');
       }
     } catch (err) {
       console.error('관심 표시 오류:', err);
@@ -139,6 +159,26 @@ export default function PostDetailPage() {
 
     // TODO: 채팅방 생성 로직 구현
     success('채팅 기능은 곧 추가될 예정입니다! 💬');
+  };
+
+  const handleManagePost = () => {
+    if (!post) return;
+    
+    // TODO: 포스트 관리 기능 (수정/삭제) 구현
+    success('포스트 관리 기능은 곧 추가될 예정입니다! ⚙️');
+  };
+
+  const handleShowInterestedUsers = async () => {
+    if (!post) return;
+
+    try {
+      const users = await getInterestedUsers(post.id);
+      setInterestedUsers(users);
+      setShowInterestedList(true);
+    } catch (err) {
+      console.error('관심 사용자 목록 조회 오류:', err);
+      error('관심 사용자 목록을 불러오는데 실패했습니다.');
+    }
   };
 
   // 거리 계산 함수
@@ -185,6 +225,9 @@ export default function PostDetailPage() {
     const diffInDays = Math.floor(diffInHours / 24);
     return `${diffInDays}일 전`;
   };
+
+  // 내가 작성한 포스트인지 확인
+  const isMyPost = user?.uid === post?.authorId;
 
   if (loading) {
     return (
@@ -273,6 +316,11 @@ export default function PostDetailPage() {
                 <div>
                   <h2 className="font-semibold text-gray-900">
                     {post.authorNickname}
+                    {isMyPost && (
+                      <span className="ml-2 text-xs bg-blue-100 text-blue-600 px-2 py-1 rounded-full">
+                        내 포스트
+                      </span>
+                    )}
                   </h2>
                   <div className="flex items-center space-x-2 text-sm text-gray-500">
                     <Clock className="w-3 h-3" />
@@ -295,13 +343,26 @@ export default function PostDetailPage() {
               <span>{post.location.address}</span>
             </div>
 
-            {/* 희망 인원 */}
-            <div className="flex items-center space-x-2 mb-4 text-sm text-gray-600">
-              <Users className="w-4 h-4" />
-              <span>희망 인원: {post.maxParticipants}</span>
-              <span className="text-blue-600 font-medium">
-                (현재 관심 {post.currentParticipants}명)
-              </span>
+            {/* 희망 인원 및 관심 수 */}
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center space-x-2 text-sm text-gray-600">
+                <Users className="w-4 h-4" />
+                <span>희망 인원: {post.maxParticipants}</span>
+              </div>
+              
+              {/* 관심 있어요 수 (작성자만 클릭 가능) */}
+              {isMyPost ? (
+                <button
+                  onClick={handleShowInterestedUsers}
+                  className="text-blue-600 font-medium text-sm hover:text-blue-700 transition-colors"
+                >
+                  관심 {post.interestedCount}명 👀
+                </button>
+              ) : (
+                <span className="text-blue-600 font-medium text-sm">
+                  관심 {post.interestedCount}명
+                </span>
+              )}
             </div>
 
             {/* 내용 */}
@@ -312,30 +373,101 @@ export default function PostDetailPage() {
 
           {/* 액션 버튼들 */}
           <div className="space-y-3">
-            {/* 관심있어요 버튼 */}
-            <button
-              onClick={handleInterest}
-              className={`w-full py-4 px-6 rounded-xl font-semibold text-lg shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center space-x-2 ${
-                isInterested
-                  ? 'bg-gray-200 text-gray-700 border border-gray-300'
-                  : 'bg-gradient-to-r from-blue-500 to-purple-600 text-white'
-              }`}
-            >
-              <span className="text-2xl">{isInterested ? '✅' : '🙌'}</span>
-              <span>{isInterested ? '관심 표시됨' : '관심있어요!'}</span>
-            </button>
+            {/* 내가 작성한 포스트가 아닐 때: 관심있어요 버튼 표시 */}
+            {!isMyPost && (
+              <button
+                onClick={handleInterest}
+                className={`w-full py-4 px-6 rounded-xl font-semibold text-lg shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center space-x-2 ${
+                  isInterested
+                    ? 'bg-gray-200 text-gray-700 border border-gray-300'
+                    : 'bg-gradient-to-r from-blue-500 to-purple-600 text-white'
+                }`}
+              >
+                <span className="text-2xl">{isInterested ? '✅' : '🙌'}</span>
+                <span>{isInterested ? '관심 표시됨' : '관심있어요!'}</span>
+              </button>
+            )}
 
-            {/* 채팅하기 버튼 */}
-            {user?.uid !== post.authorId && (
+            {/* 내가 작성한 포스트일 때: 채팅하기 버튼 표시 */}
+            {isMyPost && (
               <button
                 onClick={handleStartChat}
-                className="w-full bg-white border-2 border-blue-500 text-blue-500 py-4 px-6 rounded-xl font-semibold text-lg hover:bg-blue-50 transition-all duration-200 flex items-center justify-center space-x-2"
+                className="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white py-4 px-6 rounded-xl font-semibold text-lg shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center space-x-2"
               >
                 <span className="text-2xl">💬</span>
-                <span>채팅하기</span>
+                <span>관심 있는 분들과 채팅하기</span>
+              </button>
+            )}
+
+            {/* 내가 작성한 포스트일 때: 포스트 관리 버튼 표시 */}
+            {isMyPost && (
+              <button
+                onClick={handleManagePost}
+                className="w-full bg-white border-2 border-gray-300 text-gray-700 py-4 px-6 rounded-xl font-semibold text-lg hover:bg-gray-50 transition-all duration-200 flex items-center justify-center space-x-2"
+              >
+                <span className="text-2xl">⚙️</span>
+                <span>포스트 관리</span>
               </button>
             )}
           </div>
+
+          {/* 관심 있어요 사용자 목록 모달 */}
+          {showInterestedList && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-xl max-w-md w-full max-h-96 overflow-hidden">
+                <div className="p-4 border-b border-gray-200">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      관심 있어요 ({post.interestedCount}명)
+                    </h3>
+                    <button
+                      onClick={() => setShowInterestedList(false)}
+                      className="text-gray-500 hover:text-gray-700"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                </div>
+                <div className="p-4 overflow-y-auto max-h-64">
+                  {interestedUsers.length > 0 ? (
+                    <div className="space-y-3">
+                      {interestedUsers.map((user) => (
+                        <div key={user.uid} className="flex items-center space-x-3">
+                          <div className="w-10 h-10 bg-gray-200 rounded-full overflow-hidden flex-shrink-0">
+                            {user.profileImageUrl ? (
+                              <Image
+                                src={user.profileImageUrl}
+                                alt={`${user.nickname} 프로필`}
+                                width={40}
+                                height={40}
+                                className="object-cover"
+                              />
+                            ) : (
+                              <div className="w-full h-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center">
+                                <span className="text-white font-bold text-sm">
+                                  {user.nickname.charAt(0)}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                          <div>
+                            <p className="font-medium text-gray-900">{user.nickname}</p>
+                            <p className="text-xs text-gray-500">
+                              {formatTimeAgo(user.interestedAt)}에 관심 표시
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-center text-gray-500 py-8">
+                      아직 관심을 표시한 사람이 없습니다.
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </main>
 

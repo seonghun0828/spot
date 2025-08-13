@@ -12,8 +12,16 @@ import {
   limit,
   getDocs,
   Timestamp,
+  arrayUnion,
+  arrayRemove,
+  increment,
 } from 'firebase/firestore';
-import { PostData, PostCreateData, PostUpdateData } from '@/types/user';
+import {
+  PostData,
+  PostCreateData,
+  PostUpdateData,
+  InterestedUser,
+} from '@/types/user';
 import {
   getGeohashQueryBounds,
   isWithinRadius,
@@ -35,8 +43,8 @@ export const createPost = async (postData: PostCreateData): Promise<string> => {
         ...postData.location,
         geohash,
       },
-      currentParticipants: 1, // 작성자 포함
-      participantIds: [postData.authorId], // 작성자 포함
+      interestedCount: 0, // 관심 있어요 초기값
+      interestedUserIds: [], // 관심 있어요 사용자 목록 초기값
       createdAt: Timestamp.now(),
       updatedAt: Timestamp.now(),
     });
@@ -98,6 +106,66 @@ export const deletePost = async (postId: string): Promise<void> => {
   } catch (error) {
     console.error('포스트 삭제 오류:', error);
     throw error;
+  }
+};
+
+// 관심 있어요 표시
+export const toggleInterest = async (
+  postId: string,
+  userId: string,
+  isInterested: boolean
+): Promise<void> => {
+  try {
+    const postRef = doc(db, 'posts', postId);
+
+    if (isInterested) {
+      // 관심 표시 추가
+      await updateDoc(postRef, {
+        interestedUserIds: arrayUnion(userId),
+        interestedCount: increment(1),
+        updatedAt: Timestamp.now(),
+      });
+      console.log('관심 표시 추가:', postId, userId);
+    } else {
+      // 관심 표시 제거
+      await updateDoc(postRef, {
+        interestedUserIds: arrayRemove(userId),
+        interestedCount: increment(-1),
+        updatedAt: Timestamp.now(),
+      });
+      console.log('관심 표시 제거:', postId, userId);
+    }
+  } catch (error) {
+    console.error('관심 표시 업데이트 오류:', error);
+    throw error;
+  }
+};
+
+// 포스트에 관심 있어요 표시한 사용자 목록 조회
+export const getInterestedUsers = async (
+  postId: string
+): Promise<InterestedUser[]> => {
+  try {
+    const postData = await getPost(postId);
+    if (!postData || !postData.interestedUserIds.length) {
+      return [];
+    }
+
+    // TODO: 사용자 정보를 가져오는 로직 구현
+    // 현재는 기본 정보만 반환
+    const interestedUsers: InterestedUser[] = postData.interestedUserIds.map(
+      (uid) => ({
+        uid,
+        nickname: '사용자', // TODO: 실제 사용자 정보 조회
+        profileImageUrl: '', // TODO: 실제 사용자 정보 조회
+        interestedAt: Timestamp.now(), // TODO: 실제 관심 표시 시간 저장
+      })
+    );
+
+    return interestedUsers;
+  } catch (error) {
+    console.error('관심 사용자 목록 조회 오류:', error);
+    return [];
   }
 };
 
