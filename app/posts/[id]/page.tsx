@@ -3,11 +3,23 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Image from 'next/image';
-import { ArrowLeft, MapPin, Clock, Share2, Users } from 'lucide-react';
+import {
+  ArrowLeft,
+  MapPin,
+  Clock,
+  Share2,
+  Users,
+  MoreHorizontal,
+} from 'lucide-react';
 import BottomNavigation from '../../components/BottomNavigation';
 import { useAuth } from '@/app/contexts/AuthContext';
 import { useToast } from '@/contexts/ToastContext';
-import { getPost, toggleInterest, getInterestedUsers } from '@/lib/posts';
+import {
+  getPost,
+  toggleInterest,
+  getInterestedUsers,
+  deletePost,
+} from '@/lib/posts';
 import { PostData, InterestedUser } from '@/types/user';
 import { Timestamp } from 'firebase/firestore';
 
@@ -23,6 +35,8 @@ export default function PostDetailPage() {
   const [isInterested, setIsInterested] = useState(false);
   const [interestedUsers, setInterestedUsers] = useState<InterestedUser[]>([]);
   const [showInterestedList, setShowInterestedList] = useState(false);
+  const [showManageMenu, setShowManageMenu] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // 현재 위치 (거리 계산용)
   const [currentLocation, setCurrentLocation] = useState<{
@@ -116,24 +130,24 @@ export default function PostDetailPage() {
 
     try {
       const newInterestState = !isInterested;
-      
+
       // Firestore에 관심 표시 업데이트
       await toggleInterest(post.id, user.uid, newInterestState);
-      
+
       // UI 상태 업데이트
       setIsInterested(newInterestState);
-      
+
       // 포스트 데이터 업데이트
-      setPost(prev => {
+      setPost((prev) => {
         if (!prev) return null;
         return {
           ...prev,
-          interestedCount: newInterestState 
-            ? prev.interestedCount + 1 
+          interestedCount: newInterestState
+            ? prev.interestedCount + 1
             : prev.interestedCount - 1,
           interestedUserIds: newInterestState
             ? [...prev.interestedUserIds, user.uid]
-            : prev.interestedUserIds.filter(id => id !== user.uid)
+            : prev.interestedUserIds.filter((id) => id !== user.uid),
         };
       });
 
@@ -161,11 +175,34 @@ export default function PostDetailPage() {
     success('채팅 기능은 곧 추가될 예정입니다! 💬');
   };
 
-  const handleManagePost = () => {
+  const handleEditPost = () => {
     if (!post) return;
-    
-    // TODO: 포스트 관리 기능 (수정/삭제) 구현
-    success('포스트 관리 기능은 곧 추가될 예정입니다! ⚙️');
+
+    setShowManageMenu(false);
+    router.push(`/posts/${post.id}/edit`);
+  };
+
+  const handleDeletePost = async () => {
+    if (!post) return;
+
+    const confirmDelete = confirm(`정말로 포스트를 삭제하시겠습니까?`);
+
+    if (!confirmDelete) return;
+
+    try {
+      setIsDeleting(true);
+      setShowManageMenu(false);
+
+      await deletePost(post.id);
+
+      success('포스트가 성공적으로 삭제되었습니다! 🗑️');
+      router.push('/'); // 홈으로 이동
+    } catch (err) {
+      console.error('포스트 삭제 오류:', err);
+      error('포스트 삭제에 실패했습니다. 다시 시도해주세요.');
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   const handleShowInterestedUsers = async () => {
@@ -250,6 +287,18 @@ export default function PostDetailPage() {
     );
   }
 
+  // 삭제 중일 때 로딩 오버레이
+  if (isDeleting) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-500 mx-auto mb-4"></div>
+          <p className="text-gray-600">포스트를 삭제하는 중...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
       {/* 헤더 */}
@@ -266,13 +315,7 @@ export default function PostDetailPage() {
             <h1 className="text-lg font-semibold text-gray-900 truncate flex-1 mx-4">
               포스트
             </h1>
-            <button
-              onClick={handleShare}
-              className="p-2 text-gray-600 hover:text-gray-900 transition-colors"
-              aria-label="공유하기"
-            >
-              <Share2 className="w-5 h-5" />
-            </button>
+            <div className="w-10"></div> {/* 균형을 위한 빈 공간 */}
           </div>
         </div>
       </header>
@@ -330,6 +373,50 @@ export default function PostDetailPage() {
                   </div>
                 </div>
               </div>
+
+              {/* 프로필 우측 버튼들 */}
+              <div className="flex items-center space-x-2 relative">
+                <button
+                  onClick={handleShare}
+                  className="p-2 text-gray-500 hover:text-gray-700 transition-colors"
+                  aria-label="공유하기"
+                >
+                  <Share2 className="w-4 h-4" />
+                </button>
+
+                {/* 내가 작성한 포스트일 때만 관리 메뉴 표시 */}
+                {isMyPost && (
+                  <div className="relative">
+                    <button
+                      onClick={() => setShowManageMenu(!showManageMenu)}
+                      className="p-2 text-gray-500 hover:text-gray-700 transition-colors"
+                      aria-label="포스트 관리"
+                    >
+                      <MoreHorizontal className="w-4 h-4" />
+                    </button>
+
+                    {/* 관리 메뉴 드롭다운 */}
+                    {showManageMenu && (
+                      <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-20">
+                        <button
+                          onClick={handleEditPost}
+                          className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-2"
+                        >
+                          <span>✏️</span>
+                          <span>포스트 수정</span>
+                        </button>
+                        <button
+                          onClick={handleDeletePost}
+                          className="w-full text-left px-4 py-3 text-sm text-red-600 hover:bg-red-50 flex items-center space-x-2 border-t border-gray-100"
+                        >
+                          <span>🗑️</span>
+                          <span>포스트 삭제</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* 제목 */}
@@ -349,7 +436,7 @@ export default function PostDetailPage() {
                 <Users className="w-4 h-4" />
                 <span>희망 인원: {post.maxParticipants}</span>
               </div>
-              
+
               {/* 관심 있어요 수 (작성자만 클릭 가능) */}
               {isMyPost ? (
                 <button
@@ -398,17 +485,6 @@ export default function PostDetailPage() {
                 <span>관심 있는 분들과 채팅하기</span>
               </button>
             )}
-
-            {/* 내가 작성한 포스트일 때: 포스트 관리 버튼 표시 */}
-            {isMyPost && (
-              <button
-                onClick={handleManagePost}
-                className="w-full bg-white border-2 border-gray-300 text-gray-700 py-4 px-6 rounded-xl font-semibold text-lg hover:bg-gray-50 transition-all duration-200 flex items-center justify-center space-x-2"
-              >
-                <span className="text-2xl">⚙️</span>
-                <span>포스트 관리</span>
-              </button>
-            )}
           </div>
 
           {/* 관심 있어요 사용자 목록 모달 */}
@@ -432,7 +508,10 @@ export default function PostDetailPage() {
                   {interestedUsers.length > 0 ? (
                     <div className="space-y-3">
                       {interestedUsers.map((user) => (
-                        <div key={user.uid} className="flex items-center space-x-3">
+                        <div
+                          key={user.uid}
+                          className="flex items-center space-x-3"
+                        >
                           <div className="w-10 h-10 bg-gray-200 rounded-full overflow-hidden flex-shrink-0">
                             {user.profileImageUrl ? (
                               <Image
@@ -451,7 +530,9 @@ export default function PostDetailPage() {
                             )}
                           </div>
                           <div>
-                            <p className="font-medium text-gray-900">{user.nickname}</p>
+                            <p className="font-medium text-gray-900">
+                              {user.nickname}
+                            </p>
                             <p className="text-xs text-gray-500">
                               {formatTimeAgo(user.interestedAt)}에 관심 표시
                             </p>
@@ -467,6 +548,14 @@ export default function PostDetailPage() {
                 </div>
               </div>
             </div>
+          )}
+
+          {/* 관리 메뉴 클릭 시 배경 클릭으로 닫기 */}
+          {showManageMenu && (
+            <div
+              className="fixed inset-0 z-10"
+              onClick={() => setShowManageMenu(false)}
+            />
           )}
         </div>
       </main>
