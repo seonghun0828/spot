@@ -10,6 +10,7 @@ import {
   Share2,
   Users,
   MoreHorizontal,
+  X,
 } from 'lucide-react';
 import BottomNavigation from '../../components/BottomNavigation';
 import { useAuth } from '@/app/contexts/AuthContext';
@@ -20,7 +21,13 @@ import {
   getInterestedUsers,
   deletePost,
 } from '@/lib/posts';
+import {
+  getInterestedUsersWithDetails,
+  createChatRoom,
+  findExistingChatRoom,
+} from '@/lib/chat';
 import { PostData, InterestedUser } from '@/types/user';
+import { SelectableUser } from '@/types/chat';
 import { Timestamp } from 'firebase/firestore';
 
 export default function PostDetailPage() {
@@ -37,6 +44,13 @@ export default function PostDetailPage() {
   const [showInterestedList, setShowInterestedList] = useState(false);
   const [showManageMenu, setShowManageMenu] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // 채팅 관련 상태
+  const [showChatModal, setShowChatModal] = useState(false);
+  const [selectableUsers, setSelectableUsers] = useState<SelectableUser[]>([]);
+  const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
+  const [isLoadingUsers, setIsLoadingUsers] = useState(false);
+  const [isCreatingChat, setIsCreatingChat] = useState(false);
 
   // 현재 위치 (거리 계산용)
   const [currentLocation, setCurrentLocation] = useState<{
@@ -162,7 +176,7 @@ export default function PostDetailPage() {
     }
   };
 
-  const handleStartChat = () => {
+  const handleStartChat = async () => {
     if (!user) {
       error('로그인이 필요합니다.');
       router.push('/login');
@@ -171,8 +185,77 @@ export default function PostDetailPage() {
 
     if (!post) return;
 
-    // TODO: 채팅방 생성 로직 구현
-    success('채팅 기능은 곧 추가될 예정입니다! 💬');
+    if (post.interestedCount === 0) {
+      error('아직 관심을 표시한 사람이 없습니다.');
+      return;
+    }
+
+    try {
+      setIsLoadingUsers(true);
+      setShowChatModal(true);
+
+      // 관심 있어요 누른 사용자들의 상세 정보 조회
+      const users = await getInterestedUsersWithDetails(post.interestedUserIds);
+      setSelectableUsers(users);
+    } catch (err) {
+      console.error('사용자 정보 로드 오류:', err);
+      error('사용자 정보를 불러오는데 실패했습니다.');
+      setShowChatModal(false);
+    } finally {
+      setIsLoadingUsers(false);
+    }
+  };
+
+  const handleUserSelect = (userId: string) => {
+    setSelectedUserIds((prev) =>
+      prev.includes(userId)
+        ? prev.filter((id) => id !== userId)
+        : [...prev, userId]
+    );
+  };
+
+  const handleCreateChatRoom = async () => {
+    if (!user || !post) return;
+
+    if (selectedUserIds.length === 0) {
+      error('최소 1명 이상 선택해주세요.');
+      return;
+    }
+
+    try {
+      setIsCreatingChat(true);
+
+      // 선택된 사용자들 + 포스트 작성자로 멤버 구성
+      const memberIds = [user.uid, ...selectedUserIds];
+
+      // 동일한 멤버 구성의 채팅방이 이미 있는지 확인
+      const existingRoom = await findExistingChatRoom(post.id, memberIds);
+
+      if (existingRoom) {
+        success('이미 생성된 채팅방이 있습니다! 🎉');
+        router.push(`/chat/${existingRoom.id}`);
+        return;
+      }
+
+      // 새 채팅방 생성
+      const chatRoomId = await createChatRoom({
+        name: `${post.title} - 채팅방`,
+        postId: post.id,
+        postTitle: post.title,
+        hostId: user.uid,
+        memberIds,
+        memberCount: memberIds.length,
+        isActive: true,
+      });
+
+      success('채팅방이 생성되었습니다! 💬');
+      router.push(`/chat/${chatRoomId}`);
+    } catch (err) {
+      console.error('채팅방 생성 오류:', err);
+      error('채팅방 생성에 실패했습니다.');
+    } finally {
+      setIsCreatingChat(false);
+    }
   };
 
   const handleEditPost = () => {
@@ -323,19 +406,6 @@ export default function PostDetailPage() {
       {/* 포스트 내용 */}
       <main className="px-4 py-4">
         <div className="max-w-md mx-auto">
-          {/* MVP: 포스트 이미지 비활성화 (Storage 미사용)
-          {post.images?.[0] && (
-            <div className="w-full h-48 bg-gray-200 rounded-xl overflow-hidden mb-4 relative">
-              <Image
-                src={post.images[0]}
-                alt="Post Image"
-                fill
-                className="object-cover"
-              />
-            </div>
-          )}
-          */}
-
           {/* 포스트 헤더 */}
           <div className="bg-white rounded-xl p-4 mb-4 shadow-sm border border-gray-100">
             <div className="flex items-start justify-between mb-3">
@@ -479,10 +549,19 @@ export default function PostDetailPage() {
             {isMyPost && (
               <button
                 onClick={handleStartChat}
-                className="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white py-4 px-6 rounded-xl font-semibold text-lg shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center space-x-2"
+                disabled={post.interestedCount === 0}
+                className={`w-full py-4 px-6 rounded-xl font-semibold text-lg shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center space-x-2 ${
+                  post.interestedCount > 0
+                    ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white'
+                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                }`}
               >
                 <span className="text-2xl">💬</span>
-                <span>관심 있는 분들과 채팅하기</span>
+                <span>
+                  {post.interestedCount > 0
+                    ? '관심 있는 분들과 채팅하기'
+                    : '관심 있는 분이 없어요'}
+                </span>
               </button>
             )}
           </div>
@@ -546,6 +625,147 @@ export default function PostDetailPage() {
                     </p>
                   )}
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* 채팅 사용자 선택 모달 */}
+          {showChatModal && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-xl max-w-md w-full max-h-[600px] overflow-hidden">
+                <div className="p-4 border-b border-gray-200">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      채팅할 사람 선택
+                    </h3>
+                    <button
+                      onClick={() => {
+                        setShowChatModal(false);
+                        setSelectedUserIds([]);
+                      }}
+                      className="text-gray-500 hover:text-gray-700"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+                  <p className="text-sm text-gray-600 mt-1">
+                    최소 1명 이상 선택해주세요
+                  </p>
+                </div>
+
+                <div className="p-4 overflow-y-auto max-h-80">
+                  {isLoadingUsers ? (
+                    <div className="space-y-3">
+                      {[1, 2, 3].map((i) => (
+                        <div
+                          key={i}
+                          className="flex items-center space-x-3 animate-pulse"
+                        >
+                          <div className="w-12 h-12 bg-gray-200 rounded-full"></div>
+                          <div className="flex-1">
+                            <div className="h-4 bg-gray-200 rounded mb-2"></div>
+                            <div className="h-3 bg-gray-200 rounded w-2/3"></div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : selectableUsers.length > 0 ? (
+                    <div className="space-y-3">
+                      {selectableUsers.map((user) => (
+                        <label
+                          key={user.uid}
+                          className={`flex items-center space-x-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                            selectedUserIds.includes(user.uid)
+                              ? 'border-blue-500 bg-blue-50'
+                              : 'border-gray-200 hover:border-gray-300'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={selectedUserIds.includes(user.uid)}
+                            onChange={() => handleUserSelect(user.uid)}
+                            className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                          />
+                          <div className="w-12 h-12 bg-gray-200 rounded-full overflow-hidden flex-shrink-0 relative">
+                            {user.profileImageUrl ? (
+                              <Image
+                                src={user.profileImageUrl}
+                                alt={`${user.nickname} 프로필`}
+                                fill
+                                className="object-cover"
+                              />
+                            ) : (
+                              <div className="w-full h-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center">
+                                <span className="text-white font-bold text-sm">
+                                  {user.nickname.charAt(0)}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-gray-900">
+                              {user.nickname}
+                            </p>
+                            <div className="text-xs text-gray-600 space-y-1">
+                              {user.age && user.gender && (
+                                <p>
+                                  {user.age}세, {user.gender}
+                                </p>
+                              )}
+                              {user.interests.length > 0 && (
+                                <div className="flex flex-wrap gap-1">
+                                  {user.interests
+                                    .slice(0, 3)
+                                    .map((interest, index) => (
+                                      <span
+                                        key={index}
+                                        className="px-2 py-0.5 bg-gray-100 text-gray-700 rounded-full text-xs"
+                                      >
+                                        #{interest}
+                                      </span>
+                                    ))}
+                                  {user.interests.length > 3 && (
+                                    <span className="text-gray-500">
+                                      +{user.interests.length - 3}
+                                    </span>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-center text-gray-500 py-8">
+                      관심을 표시한 사람이 없습니다.
+                    </p>
+                  )}
+                </div>
+
+                {/* 채팅방 생성 버튼 */}
+                {selectableUsers.length > 0 && (
+                  <div className="p-4 border-t border-gray-200">
+                    <button
+                      onClick={handleCreateChatRoom}
+                      disabled={selectedUserIds.length === 0 || isCreatingChat}
+                      className={`w-full py-3 px-4 rounded-lg font-semibold transition-colors ${
+                        selectedUserIds.length > 0 && !isCreatingChat
+                          ? 'bg-blue-500 text-white hover:bg-blue-600'
+                          : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      }`}
+                    >
+                      {isCreatingChat ? (
+                        <div className="flex items-center justify-center space-x-2">
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                          <span>채팅방 생성 중...</span>
+                        </div>
+                      ) : (
+                        `채팅방 생성 (${selectedUserIds.length}명 선택)`
+                      )}
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           )}
