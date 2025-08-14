@@ -42,7 +42,7 @@ export default function ChatRoomPage() {
   const router = useRouter();
   const params = useParams<{ id: string }>();
   const { user, loading: authLoading } = useAuth();
-  const { success, error } = useToast();
+  const { error } = useToast();
 
   const [chatRoom, setChatRoom] = useState<ChatRoom | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
