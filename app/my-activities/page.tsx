@@ -10,18 +10,12 @@ import { useToast } from '@/contexts/ToastContext';
 import { getUserPosts, getUserInterestedPosts } from '@/lib/posts';
 import { PostData } from '@/types/user';
 import { Timestamp } from 'firebase/firestore';
-
-// 포스트 상태 타입
-type PostStatus = 'open' | 'closed' | 'expired';
-
-// 포스트 상태 결정 함수
-function getPostStatus(post: PostData): PostStatus {
-  if (!post.isActive) return 'expired';
-
-  // TODO: 실제 매칭 완료 로직 구현 시 수정
-  // 현재는 단순히 활성 상태만 확인
-  return 'open';
-}
+import {
+  PostStatus,
+  getPostStatusLabel,
+  getPostStatusEmoji,
+  getPostStatusStyle,
+} from '@/constants/postStatus';
 
 // 시간 포맷팅 함수
 function formatTimeAgo(timestamp: Timestamp): string {
@@ -41,17 +35,15 @@ function formatTimeAgo(timestamp: Timestamp): string {
   return `${diffInDays}일 전`;
 }
 
-function StatusBadge({ status }: { status: PostStatus }) {
-  const style =
-    status === 'open'
-      ? 'bg-green-50 text-green-700'
-      : status === 'closed'
-      ? 'bg-blue-50 text-blue-700'
-      : 'bg-gray-100 text-gray-600';
-  const label =
-    status === 'open' ? '대기 중' : status === 'closed' ? '매칭 완료' : '만료';
+function StatusBadge({ status }: { status: PostStatus | undefined }) {
+  const style = getPostStatusStyle(status);
+  const emoji = getPostStatusEmoji(status);
+  const label = getPostStatusLabel(status);
+
   return (
-    <span className={`px-2 py-0.5 text-xs rounded ${style}`}>{label}</span>
+    <span className={`px-2 py-0.5 text-xs rounded-full font-medium ${style}`}>
+      {emoji} {label}
+    </span>
   );
 }
 
@@ -62,8 +54,6 @@ function CreatedPostCard({
   post: PostData;
   onClick: () => void;
 }) {
-  const status = getPostStatus(post);
-
   return (
     <button
       onClick={onClick}
@@ -82,7 +72,7 @@ function CreatedPostCard({
             <h3 className="font-semibold text-gray-900 text-sm line-clamp-2">
               {post.title}
             </h3>
-            <StatusBadge status={status} />
+            <StatusBadge status={post.status} />
           </div>
           <div className="mt-2 flex items-center justify-between">
             <div className="flex items-center gap-1 text-xs text-gray-500">
@@ -107,8 +97,6 @@ function InterestedPostCard({
   post: PostData;
   onClick: () => void;
 }) {
-  const status = getPostStatus(post);
-
   return (
     <button
       onClick={onClick}
@@ -138,7 +126,7 @@ function InterestedPostCard({
             <h3 className="font-semibold text-gray-900 text-sm line-clamp-2">
               {post.title}
             </h3>
-            <StatusBadge status={status} />
+            <StatusBadge status={post.status} />
           </div>
           <div className="mt-1 text-xs text-gray-600">
             by {post.authorNickname}

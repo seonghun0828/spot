@@ -45,6 +45,7 @@ export const createPost = async (postData: PostCreateData): Promise<string> => {
       },
       interestedCount: 0, // 관심 있어요 초기값
       interestedUserIds: [], // 관심 있어요 사용자 목록 초기값
+      status: 'open', // 포스트 상태 초기값
       createdAt: Timestamp.now(),
       updatedAt: Timestamp.now(),
     });
@@ -319,5 +320,24 @@ export const getUserInterestedPosts = async (
   } catch (error) {
     console.error('관심 포스트 목록 조회 오류:', error);
     return [];
+  }
+};
+
+// 포스트 상태 업데이트 (채팅방 생성 시 사용)
+export const updatePostStatus = async (
+  postId: string,
+  status: 'open' | 'closed' | 'expired'
+): Promise<void> => {
+  try {
+    console.log(`포스트 ${postId} 상태를 '${status}'로 업데이트 시도 중...`);
+    const postRef = doc(db, 'posts', postId);
+    await updateDoc(postRef, {
+      status,
+      updatedAt: Timestamp.now(),
+    });
+    console.log(`✅ 포스트 ${postId} 상태가 '${status}'로 변경되었습니다.`);
+  } catch (error) {
+    console.error('❌ 포스트 상태 업데이트 오류:', error);
+    throw error;
   }
 };

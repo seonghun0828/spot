@@ -1,4 +1,5 @@
 import { Timestamp } from 'firebase/firestore';
+import { PostStatus } from '@/constants/postStatus';
 
 // 사용자 데이터 타입
 export interface UserData {
@@ -55,6 +56,7 @@ export interface PostData {
   interestedCount: number; // 관심 있어요 누른 사람 수
   interestedUserIds: string[]; // 관심 있어요 누른 사람들의 UID 목록
   meetingTime: Timestamp;
+  status?: PostStatus; // 포스트 상태 (선택적)
   createdAt: Timestamp;
   updatedAt: Timestamp;
   isActive: boolean;

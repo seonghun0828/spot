@@ -29,6 +29,7 @@ import {
 import { PostData, InterestedUser } from '@/types/user';
 import { SelectableUser } from '@/types/chat';
 import { Timestamp } from 'firebase/firestore';
+import { POST_STATUS, getPostStatusLabel } from '@/constants/postStatus';
 
 export default function PostDetailPage() {
   const router = useRouter();
@@ -66,6 +67,7 @@ export default function PostDetailPage() {
 
         if (postData) {
           setPost(postData);
+          console.log('포스트 상태 확인:', postData.status); // 디버깅용
           // 현재 사용자가 이미 관심 표시했는지 확인
           if (user && postData.interestedUserIds.includes(user.uid)) {
             setIsInterested(true);
@@ -530,39 +532,63 @@ export default function PostDetailPage() {
 
           {/* 액션 버튼들 */}
           <div className="space-y-3">
-            {/* 내가 작성한 포스트가 아닐 때: 관심있어요 버튼 표시 */}
+            {/* 내가 작성한 포스트가 아닐 때 */}
             {!isMyPost && (
-              <button
-                onClick={handleInterest}
-                className={`w-full py-4 px-6 rounded-xl font-semibold text-lg shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center space-x-2 ${
-                  isInterested
-                    ? 'bg-gray-200 text-gray-700 border border-gray-300'
-                    : 'bg-gradient-to-r from-blue-500 to-purple-600 text-white'
-                }`}
-              >
-                <span className="text-2xl">{isInterested ? '✅' : '🙌'}</span>
-                <span>{isInterested ? '관심 표시됨' : '관심있어요!'}</span>
-              </button>
+              <>
+                {post.status === POST_STATUS.CLOSED ? (
+                  // 모집 완료된 경우
+                  <div className="w-full py-4 px-6 rounded-xl font-semibold text-lg bg-gray-100 text-gray-500 flex items-center justify-center space-x-2 cursor-not-allowed">
+                    <span className="text-2xl">🚫</span>
+                    <span>{getPostStatusLabel(POST_STATUS.CLOSED)}</span>
+                  </div>
+                ) : (
+                  // 아직 모집 중인 경우
+                  <button
+                    onClick={handleInterest}
+                    className={`w-full py-4 px-6 rounded-xl font-semibold text-lg shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center space-x-2 ${
+                      isInterested
+                        ? 'bg-gray-200 text-gray-700 border border-gray-300'
+                        : 'bg-gradient-to-r from-blue-500 to-purple-600 text-white'
+                    }`}
+                  >
+                    <span className="text-2xl">
+                      {isInterested ? '✅' : '🙌'}
+                    </span>
+                    <span>{isInterested ? '관심 표시됨' : '관심있어요!'}</span>
+                  </button>
+                )}
+              </>
             )}
 
-            {/* 내가 작성한 포스트일 때: 채팅하기 버튼 표시 */}
+            {/* 내가 작성한 포스트일 때: 채팅하기 버튼 또는 채팅방 생성 완료 표시 */}
             {isMyPost && (
-              <button
-                onClick={handleStartChat}
-                disabled={post.interestedCount === 0}
-                className={`w-full py-4 px-6 rounded-xl font-semibold text-lg shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center space-x-2 ${
-                  post.interestedCount > 0
-                    ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white'
-                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                }`}
-              >
-                <span className="text-2xl">💬</span>
-                <span>
-                  {post.interestedCount > 0
-                    ? '관심 있는 분들과 채팅하기'
-                    : '관심 있는 분이 없어요'}
-                </span>
-              </button>
+              <>
+                {post.status === POST_STATUS.CLOSED ? (
+                  // 이미 채팅방이 생성된 경우
+                  <div className="w-full py-4 px-6 rounded-xl font-semibold text-lg bg-green-100 text-green-700 flex items-center justify-center space-x-2">
+                    <span className="text-2xl">🎉</span>
+                    <span>채팅방이 생성되었습니다</span>
+                  </div>
+                ) : (
+                  // 아직 채팅방이 생성되지 않은 경우
+                  <button
+                    onClick={handleStartChat}
+                    disabled={post.interestedCount === 0}
+                    className={`w-full py-4 px-6 rounded-xl font-semibold text-lg shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center space-x-2 ${
+                      post.interestedCount > 0
+                        ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white'
+                        : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    }`}
+                  >
+                    <span className="text-2xl">💬</span>
+                    <span>
+                      {post.interestedCount > 0
+                        ? '관심 있는 분들과 채팅하기'
+                        : '관심 있는 분이 없어요'}
+                    </span>
+                  </button>
+                )}
+              </>
             )}
           </div>
 

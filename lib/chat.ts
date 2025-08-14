@@ -12,6 +12,7 @@ import {
 } from 'firebase/firestore';
 import { ChatRoom, ChatRoomCreateData, SelectableUser } from '@/types/chat';
 import { getUserData } from './auth';
+import { updatePostStatus } from './posts';
 
 // 채팅방 생성
 export const createChatRoom = async (
@@ -23,6 +24,9 @@ export const createChatRoom = async (
       createdAt: Timestamp.now(),
       updatedAt: Timestamp.now(),
     });
+
+    // 포스트 상태를 'closed'로 업데이트
+    await updatePostStatus(chatRoomData.postId, 'closed');
 
     console.log('채팅방이 생성되었습니다:', docRef.id);
     return docRef.id;
