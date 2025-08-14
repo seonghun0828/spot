@@ -8,9 +8,18 @@ import {
   query,
   where,
   orderBy,
+  limit,
+  onSnapshot,
+  updateDoc,
   Timestamp,
 } from 'firebase/firestore';
-import { ChatRoom, ChatRoomCreateData, SelectableUser } from '@/types/chat';
+import {
+  ChatRoom,
+  ChatRoomCreateData,
+  SelectableUser,
+  ChatMessage,
+  ChatMessageCreateData,
+} from '@/types/chat';
 import { getUserData } from './auth';
 import { updatePostStatus } from './posts';
 
@@ -163,5 +172,96 @@ export const findExistingChatRoom = async (
   } catch (error) {
     console.error('기존 채팅방 조회 오류:', error);
     return null;
+  }
+};
+
+// 채팅 메시지 전송
+export const sendMessage = async (
+  chatRoomId: string,
+  messageData: ChatMessageCreateData
+): Promise<string> => {
+  try {
+    // 메시지 추가
+    const messageRef = await addDoc(
+      collection(db, 'chatRooms', chatRoomId, 'messages'),
+      {
+        ...messageData,
+        createdAt: Timestamp.now(),
+      }
+    );
+
+    // 채팅방 마지막 메시지 업데이트
+    const chatRoomRef = doc(db, 'chatRooms', chatRoomId);
+    await updateDoc(chatRoomRef, {
+      lastMessage: messageData.content,
+      lastMessageAt: Timestamp.now(),
+      updatedAt: Timestamp.now(),
+    });
+
+    console.log('메시지가 전송되었습니다:', messageRef.id);
+    return messageRef.id;
+  } catch (error) {
+    console.error('메시지 전송 오류:', error);
+    throw error;
+  }
+};
+
+// 채팅 메시지 실시간 구독
+export const subscribeToMessages = (
+  chatRoomId: string,
+  callback: (messages: ChatMessage[]) => void
+): (() => void) => {
+  try {
+    const messagesQuery = query(
+      collection(db, 'chatRooms', chatRoomId, 'messages'),
+      orderBy('createdAt', 'asc'),
+      limit(100) // 최근 100개 메시지만
+    );
+
+    const unsubscribe = onSnapshot(messagesQuery, (snapshot) => {
+      const messages: ChatMessage[] = [];
+      snapshot.forEach((doc) => {
+        messages.push({
+          id: doc.id,
+          ...doc.data(),
+        } as ChatMessage);
+      });
+      callback(messages);
+    });
+
+    return unsubscribe;
+  } catch (error) {
+    console.error('메시지 구독 오류:', error);
+    return () => {}; // 빈 함수 반환
+  }
+};
+
+// 채팅 메시지 목록 조회 (일회성)
+export const getChatMessages = async (
+  chatRoomId: string,
+  limitCount: number = 50
+): Promise<ChatMessage[]> => {
+  try {
+    const messagesQuery = query(
+      collection(db, 'chatRooms', chatRoomId, 'messages'),
+      orderBy('createdAt', 'desc'),
+      limit(limitCount)
+    );
+
+    const querySnapshot = await getDocs(messagesQuery);
+    const messages: ChatMessage[] = [];
+
+    querySnapshot.forEach((doc) => {
+      messages.unshift({
+        // unshift로 시간순 정렬
+        id: doc.id,
+        ...doc.data(),
+      } as ChatMessage);
+    });
+
+    return messages;
+  } catch (error) {
+    console.error('채팅 메시지 조회 오류:', error);
+    return [];
   }
 };
