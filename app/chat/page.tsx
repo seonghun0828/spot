@@ -1,50 +1,46 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Clock, MessageSquareText, Users } from 'lucide-react';
 import BottomNavigation from '../components/BottomNavigation';
+import { useAuth } from '@/app/contexts/AuthContext';
+import { useToast } from '@/contexts/ToastContext';
+import { getUserChatRooms } from '@/lib/chat';
+import { getUserData } from '@/lib/auth';
+import { Timestamp } from 'firebase/firestore';
 
-interface ChatRoomItem {
+interface ChatRoomDisplay {
   id: string;
   postTitle: string;
-  participantNames: string[]; // 나 제외 표시용
+  participantNames: string[]; // 나 제외한 다른 참여자들의 닉네임
   participantCount: number; // 총 인원 수
   lastMessage?: string;
-  lastMessageAt?: string; // ISO
-  unreadCount?: number;
+  lastMessageAt?: Timestamp;
+  unreadCount?: number; // TODO: 실제 읽지 않은 메시지 수 구현
 }
 
-const mockRooms: ChatRoomItem[] = [
-  {
-    id: 'c1',
-    postTitle: '오늘 잠실야구장 직관 같이 보실 분',
-    participantNames: ['야구팬', '스팟러버'],
-    participantCount: 3,
-    lastMessage: '어디서 만날까요?',
-    lastMessageAt: '2024-01-15T12:10:00Z',
-    unreadCount: 2,
-  },
-  {
-    id: 'c2',
-    postTitle: '강남 러닝 5km 저녁 모임',
-    participantNames: ['러너1'],
-    participantCount: 2,
-    lastMessage: '내일도 가능해요',
-    lastMessageAt: '2024-01-14T21:05:00Z',
-    unreadCount: 0,
-  },
-];
-
-function formatRelative(dateIso?: string): string {
-  if (!dateIso) return '';
-  const diffMs = Date.now() - new Date(dateIso).getTime();
+function formatRelative(timestamp?: Timestamp): string {
+  if (!timestamp) return '';
+  const date = timestamp.toDate();
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
   const diffMin = Math.floor(diffMs / 60000);
+
+  if (diffMin < 1) return '방금 전';
   if (diffMin < 60) return `${diffMin}분 전`;
+
   const diffH = Math.floor(diffMin / 60);
   if (diffH < 24) return `${diffH}시간 전`;
+
   const diffD = Math.floor(diffH / 24);
-  return `${diffD}일 전`;
+  if (diffD < 7) return `${diffD}일 전`;
+
+  // 일주일 이상 지난 경우 날짜 표시
+  return date.toLocaleDateString('ko-KR', {
+    month: 'short',
+    day: 'numeric',
+  });
 }
 
 function UnreadBadge({ count = 0 }: { count?: number }) {
@@ -58,10 +54,119 @@ function UnreadBadge({ count = 0 }: { count?: number }) {
 
 export default function ChatListPage() {
   const router = useRouter();
-  const [rooms] = useState<ChatRoomItem[]>(mockRooms);
+  const { user, loading: authLoading } = useAuth();
+  const { error } = useToast();
+
+  const [rooms, setRooms] = useState<ChatRoomDisplay[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // 채팅방 목록 로드
+  useEffect(() => {
+    const loadChatRooms = async () => {
+      if (!user) return;
+
+      try {
+        setLoading(true);
+
+        // 사용자가 참여한 채팅방 목록 조회
+        const chatRooms = await getUserChatRooms(user.uid);
+
+        // 채팅방 표시용 데이터로 변환
+        const displayRooms: ChatRoomDisplay[] = await Promise.all(
+          chatRooms.map(async (room) => {
+            // 나를 제외한 다른 참여자들의 닉네임 조회
+            const otherMemberIds = room.memberIds.filter(
+              (id) => id !== user.uid
+            );
+            const participantNames: string[] = [];
+
+            for (const memberId of otherMemberIds.slice(0, 3)) {
+              // 최대 3명까지만 표시
+              try {
+                const userData = await getUserData(memberId);
+                participantNames.push(userData?.nickname || '사용자');
+              } catch (err) {
+                console.warn(`사용자 ${memberId} 정보 조회 실패:`, err);
+                participantNames.push('사용자');
+              }
+            }
+
+            return {
+              id: room.id,
+              postTitle: room.postTitle,
+              participantNames,
+              participantCount: room.memberCount,
+              lastMessage: room.lastMessage,
+              lastMessageAt: room.lastMessageAt,
+              unreadCount: 0, // TODO: 실제 읽지 않은 메시지 수 구현
+            };
+          })
+        );
+
+        setRooms(displayRooms);
+      } catch (err) {
+        console.error('채팅방 목록 로드 오류:', err);
+        error('채팅방 목록을 불러오는데 실패했습니다.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (!authLoading && user) {
+      loadChatRooms();
+    } else if (!authLoading && !user) {
+      // 로그인되지 않은 경우 로그인 페이지로 리다이렉트
+      router.push('/login');
+    }
+  }, [user, authLoading, router, error]);
 
   const onBack = () => router.back();
   const goRoom = (roomId: string) => router.push(`/chat/${roomId}`);
+
+  // 로딩 상태
+  if (authLoading || loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 pb-20">
+        <header className="bg-white border-b border-gray-200 px-4 py-3 sticky top-0 z-10">
+          <div className="max-w-md mx-auto flex items-center justify-between">
+            <button
+              onClick={onBack}
+              className="p-2 rounded-full hover:bg-gray-100"
+            >
+              <ArrowLeft className="w-5 h-5 text-gray-700" />
+            </button>
+            <h1 className="text-lg font-semibold text-gray-900">채팅방</h1>
+            <div className="w-9" />
+          </div>
+        </header>
+
+        <div className="px-4 py-4">
+          <div className="max-w-md mx-auto space-y-3">
+            {/* 로딩 스켈레톤 */}
+            {[1, 2, 3].map((i) => (
+              <div
+                key={i}
+                className="w-full bg-white rounded-xl p-4 shadow-sm border border-gray-100"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="h-4 bg-gray-200 rounded mb-2 animate-pulse"></div>
+                    <div className="h-3 bg-gray-200 rounded w-2/3 mb-2 animate-pulse"></div>
+                    <div className="h-3 bg-gray-200 rounded w-1/2 animate-pulse"></div>
+                  </div>
+                  <div className="flex flex-col items-end gap-2">
+                    <div className="h-3 bg-gray-200 rounded w-12 animate-pulse"></div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <BottomNavigation activeTab="chat" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
@@ -136,9 +241,15 @@ export default function ChatListPage() {
               <h3 className="text-lg font-medium text-gray-900 mb-2">
                 참여한 채팅방이 없어요
               </h3>
-              <p className="text-gray-600 text-sm">
-                마음에 드는 포스트에서 &apos;관심 있어요&apos;를 눌러보세요!
+              <p className="text-gray-600 text-sm mb-4">
+                관심 있는 포스트에서 채팅방을 만들어보세요!
               </p>
+              <button
+                onClick={() => router.push('/')}
+                className="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+              >
+                포스트 둘러보기
+              </button>
             </div>
           )}
         </div>
