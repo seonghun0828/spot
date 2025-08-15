@@ -84,7 +84,7 @@ export async function uploadProfileImage(
     // await deleteOldProfileImage(userId);
 
     // 파일 업로드
-    const { data, error } = await supabase.storage
+    const { error } = await supabase.storage
       .from('profile-images')
       .upload(filePath, resizedFile, {
         cacheControl: '3600',

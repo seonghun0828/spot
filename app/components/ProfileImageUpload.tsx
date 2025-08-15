@@ -6,6 +6,7 @@ import { uploadProfileImage, deleteOldProfileImages } from '@/lib/storage';
 import { useAuth } from '@/app/contexts/AuthContext';
 import { useToast } from '@/contexts/ToastContext';
 import { updateProfile } from 'firebase/auth';
+import Image from 'next/image';
 
 interface ProfileImageUploadProps {
   currentImageUrl?: string;
@@ -95,9 +96,11 @@ export default function ProfileImageUpload({
           className={`${sizeClasses[size]} rounded-full overflow-hidden border-4 border-gray-200 bg-gray-100`}
         >
           {imageUrl ? (
-            <img
+            <Image
               src={imageUrl}
               alt="프로필 이미지"
+              width={96}
+              height={96}
               className="w-full h-full object-cover"
               onError={() => {
                 // 이미지 로드 실패 시 기본 이미지로 대체
