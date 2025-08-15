@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { ArrowLeft, Edit3, LogOut } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { signOutUser, getUserData } from '@/lib/auth';
@@ -17,27 +18,39 @@ export default function ProfilePage() {
   const [userData, setUserData] = useState<PartialUserData | null>(null);
   const [isLoadingUserData, setIsLoadingUserData] = useState(true);
 
+  // 사용자 데이터 로드 함수
+  const loadUserData = useCallback(async () => {
+    if (!user || loading) return;
+
+    try {
+      setIsLoadingUserData(true);
+      const firestoreUserData = await getUserData(user.uid);
+      console.log('🔍 Firestore에서 가져온 사용자 데이터:', firestoreUserData);
+      setUserData(firestoreUserData);
+    } catch (error) {
+      console.error('사용자 데이터 로드 오류:', error);
+    } finally {
+      setIsLoadingUserData(false);
+    }
+  }, [user, loading]);
+
   // 사용자 데이터 로드
   useEffect(() => {
-    const loadUserData = async () => {
-      if (!user || loading) return;
+    loadUserData();
+  }, [user, loading, loadUserData]);
 
-      try {
-        const firestoreUserData = await getUserData(user.uid);
-        console.log(
-          '🔍 Firestore에서 가져온 사용자 데이터:',
-          firestoreUserData
-        );
-        setUserData(firestoreUserData);
-      } catch (error) {
-        console.error('사용자 데이터 로드 오류:', error);
-      } finally {
-        setIsLoadingUserData(false);
+  // 페이지 포커스 시 데이터 새로고침 (프로필 수정 후 돌아올 때)
+  useEffect(() => {
+    const handleFocus = () => {
+      if (user && !loading) {
+        console.log('🔄 페이지 포커스 - 데이터 새로고침');
+        loadUserData();
       }
     };
 
-    loadUserData();
-  }, [user, loading]);
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [user, loading, loadUserData]);
 
   // 로그인되지 않은 경우 로그인 페이지로 리다이렉트 (useEffect 사용)
   const [isRedirectingToHome, setIsRedirectingToHome] = useState(false);
@@ -84,9 +97,10 @@ export default function ProfilePage() {
   }
 
   // Firestore 데이터와 Firebase Auth 데이터 결합
+  // Firebase Auth의 photoURL을 우선적으로 사용 (Supabase 이미지로 업데이트됨)
   const displayUser: DisplayUser = {
     nickname: userData?.nickname || user.displayName || '사용자',
-    profileImageUrl: userData?.profileImageUrl || user.photoURL || '',
+    profileImageUrl: user.photoURL || userData?.profileImageUrl || '',
     interests: userData?.interests || [],
     age: userData?.age || null,
     gender: userData?.gender || null,
@@ -144,36 +158,30 @@ export default function ProfilePage() {
           {/* 프로필 정보 */}
           <section className="bg-white px-6 py-6">
             <div className="flex flex-col items-center gap-4">
-              <button
-                onClick={handleEdit}
-                className="relative w-24 h-24 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center"
-              >
+              {/* 프로필 이미지 (보기 전용) */}
+              <div className="relative w-24 h-24 rounded-full overflow-hidden border-4 border-gray-200 bg-gray-100">
                 {displayUser.profileImageUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
+                  <Image
                     src={displayUser.profileImageUrl}
-                    alt="프로필"
+                    alt="프로필 이미지"
+                    width={96}
+                    height={96}
                     className="w-full h-full object-cover"
-                    onLoad={() =>
-                      console.log(
-                        '✅ 이미지 로드 성공:',
-                        displayUser.profileImageUrl
-                      )
-                    }
-                    onError={(e) =>
+                    onError={() => {
                       console.error(
-                        '❌ 이미지 로드 실패:',
-                        displayUser.profileImageUrl,
-                        e
-                      )
-                    }
+                        '이미지 로드 실패:',
+                        displayUser.profileImageUrl
+                      );
+                    }}
                   />
                 ) : (
-                  <span className="text-2xl font-bold text-white bg-gradient-to-br from-blue-500 to-purple-500 w-full h-full flex items-center justify-center">
-                    {displayUser.nickname.charAt(0)}
-                  </span>
+                  <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-500 to-purple-500">
+                    <span className="text-2xl font-bold text-white">
+                      {displayUser.nickname.charAt(0)}
+                    </span>
+                  </div>
                 )}
-              </button>
+              </div>
 
               <div className="text-center">
                 <p className="text-xl font-bold text-gray-900">

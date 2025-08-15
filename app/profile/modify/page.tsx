@@ -6,13 +6,7 @@ import { ArrowLeft, Plus, X } from 'lucide-react';
 import { useAuth } from '@/app/contexts/AuthContext';
 import { getUserData, updateUserData } from '@/lib/auth';
 import { useToast } from '@/contexts/ToastContext';
-
-// MVP: 이미지 업로드 기능 비활성화 (구글 프로필 이미지만 사용)
-// import {
-//   uploadProfileImage,
-//   deleteProfileImage,
-//   validateImageFile,
-// } from '@/lib/storage';
+import ProfileImageUpload from '@/app/components/ProfileImageUpload';
 
 export default function ProfileModifyPage() {
   const router = useRouter();
@@ -60,10 +54,8 @@ export default function ProfileModifyPage() {
           setGender(userData.gender || '선택안함');
         }
 
-        // MVP: 구글 프로필 이미지는 Firebase Auth에서 직접 가져오기 (Firestore에 없을 경우)
-        if (!userData?.profileImageUrl && user.photoURL) {
-          setProfileImageUrl(user.photoURL);
-        }
+        // Firebase Auth의 photoURL을 우선적으로 사용 (Supabase 이미지로 업데이트됨)
+        setProfileImageUrl(user.photoURL || userData?.profileImageUrl || '');
       } catch (error) {
         console.error('사용자 데이터 로드 오류:', error);
       } finally {
@@ -191,17 +183,21 @@ export default function ProfileModifyPage() {
       //   finalProfileImageUrl = await uploadProfileImage(user.uid, selectedFile);
       // }
 
-      // Firestore에 사용자 정보 업데이트 (이미지 제외)
+      // Firestore에 사용자 정보 업데이트
       await updateUserData(user.uid, {
         nickname: nickname.trim(),
-        // profileImageUrl: finalProfileImageUrl, // MVP: 이미지 업데이트 비활성화
+        profileImageUrl: profileImageUrl, // 프로필 이미지 URL 저장
         interests,
         age: typeof age === 'number' ? age : null,
         gender,
       });
 
       success('프로필이 수정되었습니다! 🎉');
-      router.push('/profile');
+
+      // Firestore 업데이트 완료 대기 후 이동
+      setTimeout(() => {
+        router.push('/profile');
+      }, 500);
     } catch (saveError) {
       console.error('프로필 수정 오류:', saveError);
       error('프로필 수정 중 오류가 발생했습니다. 다시 시도해주세요.');
@@ -255,49 +251,14 @@ export default function ProfileModifyPage() {
               <h2 className="text-base font-semibold text-gray-900 mb-4">
                 프로필 사진
               </h2>
-              <div className="flex flex-col items-center gap-4">
-                <div className="relative w-24 h-24 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center">
-                  {profileImageUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={profileImageUrl}
-                      alt="프로필"
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <span className="text-2xl font-bold text-white bg-gradient-to-br from-blue-500 to-purple-500 w-full h-full flex items-center justify-center">
-                      {nickname.charAt(0) || 'N'}
-                    </span>
-                  )}
-                </div>
-                <div className="text-center">
-                  <p className="text-sm text-gray-500 mb-2">
-                    구글 계정 프로필 이미지가 사용됩니다
-                  </p>
-                  <div className="text-xs text-gray-400 bg-gray-50 rounded-lg p-3">
-                    💡 <strong>이미지 변경 방법:</strong>
-                    <br />
-                    구글 계정 설정에서 프로필 이미지 변경 후<br />
-                    다시 로그인해주세요
-                  </div>
-                </div>
-                {/* MVP: 이미지 변경 기능 비활성화
-                 <button
-                   onClick={onClickImage}
-                   className="flex items-center gap-2 px-3 py-2 rounded-md bg-blue-50 text-blue-600 hover:bg-blue-100"
-                 >
-                   <Camera className="w-4 h-4" />
-                   사진 변경
-                 </button>
-                 <input
-                   ref={fileInputRef}
-                   type="file"
-                   accept="image/*"
-                   onChange={onChangeFile}
-                   className="hidden"
-                 />
-                 */}
-              </div>
+              <ProfileImageUpload
+                currentImageUrl={profileImageUrl}
+                onImageUpdate={(newImageUrl) => {
+                  setProfileImageUrl(newImageUrl);
+                }}
+                size="lg"
+                showUploadButton={true}
+              />
             </section>
 
             {/* 닉네임 */}
