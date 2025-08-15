@@ -28,7 +28,7 @@ export interface NotificationData {
   metadata?: {
     postTitle?: string;
     chatRoomName?: string;
-    [key: string]: any;
+    [key: string]: unknown;
   };
 }
 

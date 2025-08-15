@@ -16,10 +16,10 @@ import BottomNavigation from '../../components/BottomNavigation';
 import { useAuth } from '@/app/contexts/AuthContext';
 import { useToast } from '@/contexts/ToastContext';
 import {
-  getPost,
   toggleInterest,
   getInterestedUsers,
   deletePost,
+  checkAndUpdatePostExpiry,
 } from '@/lib/posts';
 import {
   getInterestedUsersWithDetails,
@@ -63,7 +63,7 @@ export default function PostDetailPage() {
     const loadPost = async () => {
       try {
         setLoading(true);
-        const postData = await getPost(postId);
+        const postData = await checkAndUpdatePostExpiry(postId);
 
         if (postData) {
           setPost(postData);

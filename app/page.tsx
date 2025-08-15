@@ -7,7 +7,11 @@ import { MapPin, RefreshCw, Navigation, Bell, User } from 'lucide-react';
 import BottomNavigation from './components/BottomNavigation';
 import { useCallback } from 'react';
 import { useAuth } from './contexts/AuthContext';
-import { getActivePosts, getNearbyPosts } from '@/lib/posts';
+import {
+  getActivePosts,
+  getNearbyPosts,
+  updateExpiredPosts,
+} from '@/lib/posts';
 import { PostData } from '@/types/user';
 import { Timestamp } from 'firebase/firestore';
 import {
@@ -232,6 +236,9 @@ export default function HomePage() {
         setIsLoading(true);
         setError(null);
 
+        // 먼저 만료된 포스트들을 자동으로 업데이트
+        await updateExpiredPosts();
+
         let fetchedPosts: PostData[];
 
         // 현재 위치가 있으면 1km 반경 필터링, 없으면 전체 조회
@@ -417,6 +424,9 @@ export default function HomePage() {
     try {
       setIsLoading(true);
       setError(null);
+
+      // 먼저 만료된 포스트들을 자동으로 업데이트
+      await updateExpiredPosts();
 
       // 위치 정보 새로고침
       await getCurrentLocation();
@@ -641,14 +651,18 @@ export default function HomePage() {
               ))}
             </div>
           ) : posts.length > 0 ? (
-            posts.map((post) => (
-              <div
-                key={post.id}
-                onClick={() => handlePostClick(post.id)}
-                className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 cursor-pointer hover:shadow-md transition-shadow duration-200"
-              >
-                <div className="flex space-x-4">
-                  {/* MVP: 포스트 이미지 비활성화 (Storage 미사용)
+            posts
+              .filter(
+                (post) => post.status === 'open' || post.status === undefined
+              ) // 만료되지 않은 포스트만 표시
+              .map((post) => (
+                <div
+                  key={post.id}
+                  onClick={() => handlePostClick(post.id)}
+                  className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 cursor-pointer hover:shadow-md transition-shadow duration-200"
+                >
+                  <div className="flex space-x-4">
+                    {/* MVP: 포스트 이미지 비활성화 (Storage 미사용)
                   <div className="w-20 h-20 bg-gray-200 rounded-lg overflow-hidden flex-shrink-0 relative">
                     {post.images?.[0] ? (
                       <Image src={post.images[0]} alt="Post Image" fill className="object-cover" />
@@ -660,77 +674,98 @@ export default function HomePage() {
                   </div>
                   */}
 
-                  {/* 작성자 프로필 이미지 */}
-                  <div className="w-12 h-12 bg-gray-200 rounded-full overflow-hidden flex-shrink-0 relative">
-                    {post.authorProfileImageUrl ? (
-                      <Image
-                        src={post.authorProfileImageUrl}
-                        alt={`${post.authorNickname} 프로필`}
-                        fill
-                        className="object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center">
-                        <span className="text-white font-bold text-sm">
-                          {post.authorNickname.charAt(0)}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* 포스트 정보 */}
-                  <div className="flex-1 min-w-0">
-                    {/* 제목 */}
-                    <h3 className="font-semibold text-gray-900 text-sm mb-2 line-clamp-1">
-                      {post.title}
-                    </h3>
-
-                    {/* 작성자 정보와 거리 */}
-                    <div className="flex items-center space-x-2 mb-1">
-                      <span className="text-xs text-gray-600">
-                        {post.authorNickname}
-                      </span>
-                      <div className="flex items-center space-x-1">
-                        <MapPin className="w-3 h-3 text-gray-400" />
-                        <span className="text-xs text-gray-500">
-                          {(() => {
-                            const distance = calculateDistance(
-                              post,
-                              currentLocation
-                            );
-                            if (distance === -1) return '위치 확인 중';
-                            return distance < 1000
-                              ? `${Math.round(distance)}m`
-                              : `${(distance / 1000).toFixed(1)}km`;
-                          })()}
-                        </span>
-                      </div>
+                    {/* 작성자 프로필 이미지 */}
+                    <div className="w-12 h-12 bg-gray-200 rounded-full overflow-hidden flex-shrink-0 relative">
+                      {post.authorProfileImageUrl ? (
+                        <Image
+                          src={post.authorProfileImageUrl}
+                          alt={`${post.authorNickname} 프로필`}
+                          fill
+                          className="object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center">
+                          <span className="text-white font-bold text-sm">
+                            {post.authorNickname.charAt(0)}
+                          </span>
+                        </div>
+                      )}
                     </div>
 
-                    {/* 내용 미리보기 */}
-                    <p className="text-xs text-gray-500 mb-2 line-clamp-2">
-                      {post.content}
-                    </p>
+                    {/* 포스트 정보 */}
+                    <div className="flex-1 min-w-0">
+                      {/* 제목 */}
+                      <h3 className="font-semibold text-gray-900 text-sm mb-2 line-clamp-1">
+                        {post.title}
+                      </h3>
 
-                    {/* 시간 및 관심 수 */}
-                    <div className="flex items-center justify-between text-xs text-gray-400">
-                      <span>{formatTimeAgo(post.createdAt)}</span>
-                      <span>관심 {post.interestedCount}명</span>
+                      {/* 작성자 정보와 거리 */}
+                      <div className="flex items-center space-x-2 mb-1">
+                        <span className="text-xs text-gray-600">
+                          {post.authorNickname}
+                        </span>
+                        <div className="flex items-center space-x-1">
+                          <MapPin className="w-3 h-3 text-gray-400" />
+                          <span className="text-xs text-gray-500">
+                            {(() => {
+                              const distance = calculateDistance(
+                                post,
+                                currentLocation
+                              );
+                              if (distance === -1) return '위치 확인 중';
+                              return distance < 1000
+                                ? `${Math.round(distance)}m`
+                                : `${(distance / 1000).toFixed(1)}km`;
+                            })()}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* 내용 미리보기 */}
+                      <p className="text-xs text-gray-500 mb-2 line-clamp-2">
+                        {post.content}
+                      </p>
+
+                      {/* 시간 및 관심 수 */}
+                      <div className="flex items-center justify-between text-xs text-gray-400">
+                        <span>{formatTimeAgo(post.createdAt)}</span>
+                        <span>관심 {post.interestedCount}명</span>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            ))
-          ) : (
+              ))
+          ) : posts.filter(
+              (post) => post.status === 'open' || post.status === undefined
+            ).length === 0 ? (
             <div className="text-center py-12">
               <div className="w-16 h-16 bg-gray-200 rounded-full mx-auto mb-4 flex items-center justify-center">
                 <MapPin className="w-8 h-8 text-gray-400" />
               </div>
               <h3 className="text-lg font-medium text-gray-900 mb-2">
-                주변에 포스트가 없어요
+                주변에 모집 중인 포스트가 없어요
               </h3>
               <p className="text-gray-600 text-sm mb-4">
-                첫 번째 포스트를 작성해보세요!
+                새로운 만남을 위해 포스트를 작성해보세요!
+              </p>
+              <button
+                onClick={handleCreatePost}
+                className="bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-600 transition-colors"
+              >
+                포스트 작성하기
+              </button>
+            </div>
+          ) : (
+            // 모든 포스트가 만료된 경우
+            <div className="text-center py-12">
+              <div className="w-16 h-16 bg-gray-200 rounded-full mx-auto mb-4 flex items-center justify-center">
+                <MapPin className="w-8 h-8 text-gray-400" />
+              </div>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
+                모든 포스트가 만료되었어요
+              </h3>
+              <p className="text-gray-600 text-sm mb-4">
+                새로운 포스트를 작성하거나 잠시 후 다시 확인해보세요!
               </p>
               <button
                 onClick={handleCreatePost}

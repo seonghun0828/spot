@@ -38,6 +38,11 @@ export const createPost = async (postData: PostCreateData): Promise<string> => {
       postData.location.longitude
     );
 
+    const now = Timestamp.now();
+    const expiresAt = Timestamp.fromDate(
+      new Date(now.toDate().getTime() + 60 * 60 * 1000) // 1시간 후
+    );
+
     const docRef = await addDoc(collection(db, 'posts'), {
       ...postData,
       location: {
@@ -47,8 +52,9 @@ export const createPost = async (postData: PostCreateData): Promise<string> => {
       interestedCount: 0, // 관심 있어요 초기값
       interestedUserIds: [], // 관심 있어요 사용자 목록 초기값
       status: 'open', // 포스트 상태 초기값
-      createdAt: Timestamp.now(),
-      updatedAt: Timestamp.now(),
+      expiresAt, // 만료 시간 (1시간 후)
+      createdAt: now,
+      updatedAt: now,
     });
 
     console.log('포스트가 생성되었습니다:', docRef.id);
@@ -361,6 +367,87 @@ export const updatePostStatus = async (
     console.log(`✅ 포스트 ${postId} 상태가 '${status}'로 변경되었습니다.`);
   } catch (error) {
     console.error('❌ 포스트 상태 업데이트 오류:', error);
+    throw error;
+  }
+};
+
+// 포스트 만료 여부 체크
+export const isPostExpired = (post: PostData): boolean => {
+  const now = new Date();
+  const expiresAt = post.expiresAt.toDate();
+  return now > expiresAt;
+};
+
+// 만료된 포스트들을 자동으로 expired 상태로 업데이트
+export const updateExpiredPosts = async (): Promise<void> => {
+  try {
+    const now = Timestamp.now();
+
+    // 만료 시간이 지났지만 아직 expired 상태가 아닌 포스트들 조회
+    const expiredQuery = query(
+      collection(db, 'posts'),
+      where('expiresAt', '<=', now),
+      where('status', '!=', 'expired'),
+      where('isActive', '==', true)
+    );
+
+    const querySnapshot = await getDocs(expiredQuery);
+
+    if (querySnapshot.empty) {
+      console.log('만료된 포스트가 없습니다.');
+      return;
+    }
+
+    // 배치 업데이트
+    const updatePromises = querySnapshot.docs.map((doc) =>
+      updateDoc(doc.ref, {
+        status: 'expired',
+        updatedAt: now,
+      })
+    );
+
+    await Promise.all(updatePromises);
+
+    console.log(`${querySnapshot.size}개의 포스트가 만료 처리되었습니다.`);
+  } catch (error) {
+    console.error('만료된 포스트 업데이트 오류:', error);
+    throw error;
+  }
+};
+
+// 특정 포스트의 만료 상태 체크 및 업데이트
+export const checkAndUpdatePostExpiry = async (
+  postId: string
+): Promise<PostData | null> => {
+  try {
+    const postRef = doc(db, 'posts', postId);
+    const postDoc = await getDoc(postRef);
+
+    if (!postDoc.exists()) {
+      return null;
+    }
+
+    const postData = { id: postDoc.id, ...postDoc.data() } as PostData;
+
+    // 만료 체크
+    if (isPostExpired(postData) && postData.status !== 'expired') {
+      // 만료 상태로 업데이트
+      await updateDoc(postRef, {
+        status: 'expired',
+        updatedAt: Timestamp.now(),
+      });
+
+      // 업데이트된 데이터 반환
+      return {
+        ...postData,
+        status: 'expired',
+        updatedAt: Timestamp.now(),
+      };
+    }
+
+    return postData;
+  } catch (error) {
+    console.error('포스트 만료 체크 오류:', error);
     throw error;
   }
 };
