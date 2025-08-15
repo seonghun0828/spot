@@ -168,13 +168,23 @@ export default function PostDetailPage() {
   const handleKakaoShare = () => {
     if (!post) return;
 
+    console.log('카카오 공유 시작:', {
+      kakaoSdk: typeof window !== 'undefined' && window.Kakao,
+      apiKey: process.env.NEXT_PUBLIC_KAKAO_JAVASCRIPT_KEY ? '설정됨' : '설정되지 않음',
+      currentUrl: window.location.href,
+    });
+
     // 카카오 SDK가 로드되었는지 확인
     if (typeof window !== 'undefined' && window.Kakao) {
       if (!window.Kakao.isInitialized()) {
-        // 카카오 SDK 초기화 (실제 API 키로 교체 필요)
-        const kakaoApiKey = process.env.NEXT_PUBLIC_KAKAO_API_KEY;
+        // 카카오 SDK 초기화 (JavaScript 키 사용)
+        const kakaoApiKey = process.env.NEXT_PUBLIC_KAKAO_JAVASCRIPT_KEY;
         if (kakaoApiKey) {
           window.Kakao.init(kakaoApiKey);
+        } else {
+          console.error('카카오 JavaScript 키가 설정되지 않았습니다.');
+          handleCopyLink();
+          return;
         }
       }
 
