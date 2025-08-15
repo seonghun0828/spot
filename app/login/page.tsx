@@ -1,24 +1,43 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { signInWithGoogle } from '@/lib/auth';
 import { useAuth } from '@/app/contexts/AuthContext';
 
-export default function LoginPage() {
+function LoginPageContent() {
   // const [isLoading, setIsLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user, loading } = useAuth();
 
-  // 이미 로그인된 경우 홈으로 리다이렉트 (useEffect 사용)
+  const returnUrl = searchParams.get('returnUrl') || '/';
+
+  // 브라우저 뒤로가기 이벤트 감지
+  useEffect(() => {
+    const handlePopState = () => {
+      // 뒤로가기 시 플래그 설정
+      sessionStorage.setItem('fromLogin', 'true');
+    };
+
+    window.addEventListener('popstate', handlePopState);
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, []);
+
+  // 이미 로그인된 경우 returnUrl 또는 홈으로 리다이렉트 (useEffect 사용)
   useEffect(() => {
     console.log('user', user);
     if (user && !loading) {
-      router.push('/');
+      // router.push 대신 router.replace를 사용하여 히스토리 교체
+      // 이렇게 하면 뒤로가기 시 로그인 페이지로 돌아가지 않음
+      router.replace(returnUrl);
     }
-  }, [user, loading, router]);
+  }, [user, loading, router, returnUrl]);
 
   // 로딩 중이거나 이미 로그인된 경우 로딩 화면 표시
   if (loading || user) {
@@ -103,8 +122,17 @@ export default function LoginPage() {
       <div className="max-w-md w-full space-y-8">
         {/* 헤더 */}
         <div className="text-center">
-          <Link href="/" className="inline-block">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Spot</h1>
+          <Link
+            href="/"
+            className="inline-block"
+            onClick={() => {
+              // 홈으로 이동 시 플래그 설정
+              sessionStorage.setItem('fromLogin', 'true');
+            }}
+          >
+            <h1 className="text-3xl font-bold text-gray-900 mb-2 hover:text-blue-600 transition-colors">
+              Spot
+            </h1>
           </Link>
           <p className="text-gray-600">지금 바로 주위 사람들과 연결하세요</p>
         </div>
@@ -251,5 +279,37 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+          <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 text-center">
+            <div className="w-16 h-16 bg-blue-100 rounded-full mx-auto mb-4 flex items-center justify-center">
+              <svg
+                className="w-8 h-8 text-blue-500 animate-spin"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                />
+              </svg>
+            </div>
+            <h2 className="text-xl font-bold text-gray-900 mb-2">로딩 중...</h2>
+            <p className="text-gray-600">잠시만 기다려주세요</p>
+          </div>
+        </div>
+      }
+    >
+      <LoginPageContent />
+    </Suspense>
   );
 }

@@ -21,14 +21,18 @@ export default function BottomNavigation({ activeTab }: BottomNavigationProps) {
         if (user) {
           router.push('/chat');
         } else {
-          router.push('/login');
+          sessionStorage.setItem('fromLogin', 'true');
+          router.push('/login?returnUrl=' + encodeURIComponent('/chat'));
         }
         break;
       case 'activity':
         if (user) {
           router.push('/my-activities');
         } else {
-          router.push('/login');
+          sessionStorage.setItem('fromLogin', 'true');
+          router.push(
+            '/login?returnUrl=' + encodeURIComponent('/my-activities')
+          );
         }
         break;
     }

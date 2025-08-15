@@ -69,6 +69,31 @@ export default function HomePage() {
   const router = useRouter();
   const { user } = useAuth();
 
+  // 로그인 페이지에서 돌아온 경우를 추적
+  const [isFromLogin, setIsFromLogin] = useState(false);
+
+  useEffect(() => {
+    // 로그인 페이지에서 돌아온 경우 플래그 설정
+    const fromLogin = sessionStorage.getItem('fromLogin');
+    if (fromLogin === 'true') {
+      setIsFromLogin(true);
+      sessionStorage.removeItem('fromLogin');
+      // 5초 후 플래그 해제 (충분한 시간 제공)
+      setTimeout(() => setIsFromLogin(false), 5000);
+    }
+  }, []);
+
+  // 로그인 페이지에서 돌아온 경우 불필요한 리다이렉트 방지
+  useEffect(() => {
+    if (isFromLogin) {
+      // 로그인 페이지에서 돌아온 경우에는 리다이렉트하지 않음
+      return;
+    }
+
+    // 일반적인 로그인 체크 로직은 여기에 추가 가능
+    // 현재 홈 페이지는 로그인이 필요하지 않으므로 비워둘
+  }, [user, isFromLogin]);
+
   // Firestore 포스트 데이터 상태
   const [posts, setPosts] = useState<PostData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -576,7 +601,17 @@ export default function HomePage() {
                 )}
               </div>
               <button
-                onClick={() => router.push('/profile')}
+                onClick={() => {
+                  if (user) {
+                    router.push('/profile');
+                  } else {
+                    // 로그인 페이지로 이동 시 플래그 설정
+                    sessionStorage.setItem('fromLogin', 'true');
+                    router.push(
+                      '/login?returnUrl=' + encodeURIComponent('/profile')
+                    );
+                  }
+                }}
                 className="p-2 text-gray-500 hover:text-blue-500 transition-colors"
                 aria-label="프로필"
               >

@@ -40,11 +40,13 @@ export default function ProfilePage() {
   }, [user, loading]);
 
   // 로그인되지 않은 경우 로그인 페이지로 리다이렉트 (useEffect 사용)
+  const [isRedirectingToHome, setIsRedirectingToHome] = useState(false);
+
   useEffect(() => {
-    if (!loading && !user) {
+    if (!loading && !user && !isRedirectingToHome) {
       router.push('/login');
     }
-  }, [user, loading, router]);
+  }, [user, loading, router, isRedirectingToHome]);
 
   // 로딩 중이거나 로그인되지 않은 경우 로딩 화면 표시
   if (loading || !user || isLoadingUserData) {
@@ -100,6 +102,7 @@ export default function ProfilePage() {
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
+    setIsRedirectingToHome(true); // 홈으로 리다이렉트 플래그 설정
     try {
       await signOutUser();
       setShowLogoutConfirm(false);
@@ -108,6 +111,7 @@ export default function ProfilePage() {
     } catch (error) {
       console.error('로그아웃 오류:', error);
       alert('로그아웃 중 오류가 발생했습니다.');
+      setIsRedirectingToHome(false); // 오류 시 플래그 해제
     } finally {
       setIsLoggingOut(false);
     }
