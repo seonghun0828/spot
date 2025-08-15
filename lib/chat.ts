@@ -22,6 +22,10 @@ import {
 } from '@/types/chat';
 import { getUserData } from './auth';
 import { updatePostStatus } from './posts';
+import {
+  createChatMessageNotification,
+  createChatRoomCreatedNotification,
+} from './notifications';
 
 // 채팅방 생성
 export const createChatRoom = async (
@@ -36,6 +40,20 @@ export const createChatRoom = async (
 
     // 포스트 상태를 'closed'로 업데이트
     await updatePostStatus(chatRoomData.postId, 'closed');
+
+    // 채팅방 생성 알림 (멤버들에게)
+    try {
+      await createChatRoomCreatedNotification(
+        chatRoomData.memberIds,
+        docRef.id,
+        chatRoomData.name,
+        chatRoomData.createdBy,
+        chatRoomData.createdByName
+      );
+    } catch (notifError) {
+      console.error('채팅방 생성 알림 오류:', notifError);
+      // 알림 실패해도 채팅방 생성은 유지
+    }
 
     console.log('채팅방이 생성되었습니다:', docRef.id);
     return docRef.id;
@@ -197,6 +215,27 @@ export const sendMessage = async (
       lastMessageAt: Timestamp.now(),
       updatedAt: Timestamp.now(),
     });
+
+    // 채팅방 정보 조회 (알림용)
+    const chatRoomDoc = await getDoc(chatRoomRef);
+    const chatRoomData = chatRoomDoc.data() as ChatRoom;
+
+    // 채팅 메시지 알림 (다른 멤버들에게)
+    if (chatRoomData) {
+      try {
+        await createChatMessageNotification(
+          chatRoomData.memberIds,
+          chatRoomId,
+          chatRoomData.name,
+          messageData.senderId,
+          messageData.senderNickname,
+          messageData.content
+        );
+      } catch (notifError) {
+        console.error('채팅 메시지 알림 오류:', notifError);
+        // 알림 실패해도 메시지 전송은 유지
+      }
+    }
 
     console.log('메시지가 전송되었습니다:', messageRef.id);
     return messageRef.id;

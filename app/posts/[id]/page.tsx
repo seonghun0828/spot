@@ -148,7 +148,12 @@ export default function PostDetailPage() {
       const newInterestState = !isInterested;
 
       // Firestore에 관심 표시 업데이트
-      await toggleInterest(post.id, user.uid, newInterestState);
+      await toggleInterest(
+        post.id,
+        user.uid,
+        newInterestState,
+        user.displayName || user.email || '사용자'
+      );
 
       // UI 상태 업데이트
       setIsInterested(newInterestState);
@@ -247,6 +252,8 @@ export default function PostDetailPage() {
         hostId: user.uid,
         memberIds,
         memberCount: memberIds.length,
+        createdBy: user.uid,
+        createdByName: user.displayName || user.email || '사용자',
         isActive: true,
       });
 

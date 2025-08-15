@@ -16,6 +16,7 @@ import {
   arrayRemove,
   increment,
 } from 'firebase/firestore';
+import { createInterestNotification } from './notifications';
 import {
   PostData,
   PostCreateData,
@@ -114,18 +115,40 @@ export const deletePost = async (postId: string): Promise<void> => {
 export const toggleInterest = async (
   postId: string,
   userId: string,
-  isInterested: boolean
+  isInterested: boolean,
+  userNickname?: string
 ): Promise<void> => {
   try {
     const postRef = doc(db, 'posts', postId);
 
     if (isInterested) {
+      // 포스트 정보 조회 (알림용)
+      const postDoc = await getDoc(postRef);
+      const postData = postDoc.data() as PostData;
+
       // 관심 표시 추가
       await updateDoc(postRef, {
         interestedUserIds: arrayUnion(userId),
         interestedCount: increment(1),
         updatedAt: Timestamp.now(),
       });
+
+      // 알림 생성 (포스트 작성자에게)
+      if (postData && userNickname) {
+        try {
+          await createInterestNotification(
+            postData.authorId,
+            postId,
+            postData.title,
+            userId,
+            userNickname
+          );
+        } catch (notifError) {
+          console.error('관심 표시 알림 생성 오류:', notifError);
+          // 알림 생성 실패해도 관심 표시는 유지
+        }
+      }
+
       console.log('관심 표시 추가:', postId, userId);
     } else {
       // 관심 표시 제거
@@ -137,7 +160,7 @@ export const toggleInterest = async (
       console.log('관심 표시 제거:', postId, userId);
     }
   } catch (error) {
-    console.error('관심 표시 업데이트 오류:', error);
+    console.error('관심 표시 처리 오류:', error);
     throw error;
   }
 };

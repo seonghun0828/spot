@@ -9,6 +9,8 @@ export interface ChatRoom {
   hostId: string; // 방장 (포스트 작성자) ID
   memberIds: string[]; // 참여자 UID 목록
   memberCount: number; // 참여자 수
+  createdBy: string; // 채팅방 생성자 ID
+  createdByName: string; // 채팅방 생성자 이름
   lastMessage?: string; // 마지막 메시지
   lastMessageAt?: Timestamp; // 마지막 메시지 시간
   createdAt: Timestamp;

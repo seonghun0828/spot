@@ -10,6 +10,13 @@ import { useAuth } from './contexts/AuthContext';
 import { getActivePosts, getNearbyPosts } from '@/lib/posts';
 import { PostData } from '@/types/user';
 import { Timestamp } from 'firebase/firestore';
+import {
+  subscribeToNotifications,
+  markNotificationAsRead,
+  subscribeToNotificationStats,
+} from '@/lib/notifications';
+import { NotificationData, NotificationType } from '@/types/notification';
+import { Heart, MessageCircle, Users } from 'lucide-react';
 
 // 거리 계산 헬퍼 함수
 const calculateDistance = (
@@ -72,6 +79,10 @@ export default function HomePage() {
   const [locationStatus, setLocationStatus] = useState<
     'idle' | 'loading' | 'success' | 'error'
   >('idle');
+
+  // 알림 관련 상태
+  const [notifications, setNotifications] = useState<NotificationData[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   // 위도경도를 주소로 변환하는 함수
   const reverseGeocode = useCallback(
@@ -253,6 +264,49 @@ export default function HomePage() {
     getCurrentLocation();
   }, [getCurrentLocation]);
 
+  // 알림 실시간 구독
+  useEffect(() => {
+    if (!user) {
+      setNotifications([]);
+      setUnreadCount(0);
+      return;
+    }
+
+    // 알림 목록 구독
+    const unsubscribeNotifications = subscribeToNotifications(
+      user.uid,
+      (newNotifications) => {
+        // 최근 5개만 드롭다운에 표시
+        setNotifications(newNotifications.slice(0, 5));
+      }
+    );
+
+    // 읽지 않은 알림 개수 구독
+    const unsubscribeStats = subscribeToNotificationStats(user.uid, (stats) => {
+      setUnreadCount(stats.unread);
+    });
+
+    return () => {
+      unsubscribeNotifications();
+      unsubscribeStats();
+    };
+  }, [user]);
+
+  // 드롭다운 외부 클릭 시 닫기
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (isNotifOpen) {
+        const target = event.target as Element;
+        if (!target.closest('.notification-dropdown')) {
+          setIsNotifOpen(false);
+        }
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isNotifOpen]);
+
   // 두 지점 간의 거리 계산 (미터 단위) - 위치 좌표용
   const calculateLocationDistance = (
     lat1: number,
@@ -279,6 +333,75 @@ export default function HomePage() {
       return address;
     }
     return `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+  };
+
+  // 알림 시간 포맷팅
+  const formatNotificationTime = (timestamp: Timestamp): string => {
+    const date = timestamp.toDate();
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMin = Math.floor(diffMs / 60000);
+
+    if (diffMin < 1) return '방금';
+    if (diffMin < 60) return `${diffMin}분 전`;
+
+    const diffH = Math.floor(diffMin / 60);
+    if (diffH < 24) return `${diffH}시간 전`;
+
+    const diffD = Math.floor(diffH / 24);
+    if (diffD < 7) return `${diffD}일 전`;
+
+    return date.toLocaleDateString('ko-KR', {
+      month: 'short',
+      day: 'numeric',
+    });
+  };
+
+  // 알림 타입별 아이콘
+  const getNotificationIcon = (type: NotificationType) => {
+    switch (type) {
+      case NotificationType.INTEREST:
+        return <Heart className="w-4 h-4 text-red-500" />;
+      case NotificationType.CHAT_MESSAGE:
+        return <MessageCircle className="w-4 h-4 text-blue-500" />;
+      case NotificationType.CHAT_ROOM_CREATED:
+        return <Users className="w-4 h-4 text-green-500" />;
+      default:
+        return <Bell className="w-4 h-4 text-gray-500" />;
+    }
+  };
+
+  // 알림 클릭 처리
+  const handleNotificationClick = async (notification: NotificationData) => {
+    try {
+      // 읽지 않은 알림이면 읽음 처리
+      if (!notification.isRead) {
+        await markNotificationAsRead(notification.id);
+      }
+
+      // 드롭다운 닫기
+      setIsNotifOpen(false);
+
+      // 알림 타입에 따라 해당 페이지로 이동
+      switch (notification.type) {
+        case NotificationType.INTEREST:
+        case NotificationType.POST_STATUS_CHANGED:
+          if (notification.postId) {
+            router.push(`/posts/${notification.postId}`);
+          }
+          break;
+        case NotificationType.CHAT_MESSAGE:
+        case NotificationType.CHAT_ROOM_CREATED:
+          if (notification.chatRoomId) {
+            router.push(`/chat/${notification.chatRoomId}`);
+          }
+          break;
+        default:
+          break;
+      }
+    } catch (err) {
+      console.error('알림 처리 오류:', err);
+    }
   };
 
   console.log('🏠 홈페이지 렌더링 시작');
@@ -349,47 +472,110 @@ export default function HomePage() {
               >
                 <RefreshCw className="w-5 h-5" />
               </button>
-              <div className="relative">
+              <div className="relative notification-dropdown">
                 <button
                   onClick={() => setIsNotifOpen((v) => !v)}
-                  className="p-2 text-gray-500 hover:text-blue-500 transition-colors"
+                  className="p-2 text-gray-500 hover:text-blue-500 transition-colors relative"
                   aria-label="알림"
                 >
                   <Bell className="w-5 h-5" />
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full min-w-[16px] h-4 flex items-center justify-center px-1">
+                      {unreadCount > 9 ? '9+' : unreadCount}
+                    </span>
+                  )}
                 </button>
                 {isNotifOpen && (
-                  <div className="absolute right-0 mt-2 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-20">
-                    <div className="px-3 py-2 border-b text-xs text-gray-500">
-                      최근 알림
+                  <div className="absolute right-0 mt-2 w-80 bg-white border border-gray-200 rounded-lg shadow-lg z-20">
+                    <div className="px-3 py-2 border-b flex items-center justify-between">
+                      <span className="text-xs text-gray-500">최근 알림</span>
+                      {notifications.length > 0 && (
+                        <button
+                          onClick={() => {
+                            setIsNotifOpen(false);
+                            router.push('/notifications');
+                          }}
+                          className="text-xs text-blue-500 hover:text-blue-600"
+                        >
+                          모두 보기
+                        </button>
+                      )}
                     </div>
-                    <button
-                      onClick={() => {
-                        setIsNotifOpen(false);
-                        // 알림 클릭 예시: 내 포스트 관심 알림 → 상세로 이동
-                        router.push(`/posts/${posts[0]?.id ?? '1'}`);
-                      }}
-                      className="w-full text-left px-3 py-3 hover:bg-gray-50"
-                    >
-                      <div className="text-sm text-gray-900">
-                        내 포스트에 &apos;관심 있어요&apos;가 달렸어요
+
+                    {notifications.length === 0 ? (
+                      <div className="px-3 py-6 text-center">
+                        <Bell className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                        <p className="text-sm text-gray-500">
+                          새로운 알림이 없습니다
+                        </p>
                       </div>
-                      <div className="text-xs text-gray-500 mt-0.5">2분 전</div>
-                    </button>
-                    <button
-                      onClick={() => {
-                        setIsNotifOpen(false);
-                        // 알림 클릭 예시: 채팅방 생성 알림 → 채팅 목록 또는 특정 방
-                        router.push(`/chat`);
-                      }}
-                      className="w-full text-left px-3 py-3 hover:bg-gray-50 border-t"
-                    >
-                      <div className="text-sm text-gray-900">
-                        새 채팅방이 생성되었어요
+                    ) : (
+                      <div className="max-h-80 overflow-y-auto">
+                        {notifications.map((notification, index) => (
+                          <button
+                            key={notification.id}
+                            onClick={() =>
+                              handleNotificationClick(notification)
+                            }
+                            className={`w-full text-left px-3 py-3 hover:bg-gray-50 transition-colors ${
+                              index > 0 ? 'border-t border-gray-100' : ''
+                            } ${!notification.isRead ? 'bg-blue-50' : ''}`}
+                          >
+                            <div className="flex items-start space-x-3">
+                              <div className="flex-shrink-0 mt-0.5">
+                                {getNotificationIcon(notification.type)}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-start justify-between">
+                                  <div className="flex-1">
+                                    <p
+                                      className={`text-sm font-medium ${
+                                        !notification.isRead
+                                          ? 'text-gray-900'
+                                          : 'text-gray-700'
+                                      }`}
+                                    >
+                                      {notification.title}
+                                    </p>
+                                    <p
+                                      className={`text-xs mt-1 line-clamp-2 ${
+                                        !notification.isRead
+                                          ? 'text-gray-700'
+                                          : 'text-gray-500'
+                                      }`}
+                                    >
+                                      {notification.message}
+                                    </p>
+                                    <p className="text-xs text-gray-400 mt-1">
+                                      {formatNotificationTime(
+                                        notification.createdAt
+                                      )}
+                                    </p>
+                                  </div>
+                                  {!notification.isRead && (
+                                    <div className="w-2 h-2 bg-blue-500 rounded-full ml-2 mt-1 flex-shrink-0"></div>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </button>
+                        ))}
+
+                        {notifications.length === 5 && (
+                          <div className="px-3 py-2 border-t bg-gray-50">
+                            <button
+                              onClick={() => {
+                                setIsNotifOpen(false);
+                                router.push('/notifications');
+                              }}
+                              className="w-full text-center text-sm text-blue-500 hover:text-blue-600 py-1"
+                            >
+                              더 많은 알림 보기
+                            </button>
+                          </div>
+                        )}
                       </div>
-                      <div className="text-xs text-gray-500 mt-0.5">
-                        10분 전
-                      </div>
-                    </button>
+                    )}
                   </div>
                 )}
               </div>
