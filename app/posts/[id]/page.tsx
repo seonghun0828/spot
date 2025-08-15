@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Image from 'next/image';
 import {
@@ -11,6 +11,8 @@ import {
   Users,
   MoreHorizontal,
   X,
+  Copy,
+  MessageCircle,
 } from 'lucide-react';
 import BottomNavigation from '../../components/BottomNavigation';
 import { useAuth } from '@/app/contexts/AuthContext';
@@ -44,6 +46,7 @@ export default function PostDetailPage() {
   const [interestedUsers, setInterestedUsers] = useState<InterestedUser[]>([]);
   const [showInterestedList, setShowInterestedList] = useState(false);
   const [showManageMenu, setShowManageMenu] = useState(false);
+  const [showShareMenu, setShowShareMenu] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
   // 채팅 관련 상태
@@ -58,6 +61,10 @@ export default function PostDetailPage() {
     latitude: number;
     longitude: number;
   } | null>(null);
+
+  // 드롭다운 ref
+  const shareMenuRef = useRef<HTMLDivElement>(null);
+  const manageMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const loadPost = async () => {
@@ -111,27 +118,97 @@ export default function PostDetailPage() {
     getCurrentLocation();
   }, []);
 
+  // 드롭다운 외부 클릭 감지
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      // 공유 메뉴 외부 클릭
+      if (
+        shareMenuRef.current &&
+        !shareMenuRef.current.contains(event.target as Node)
+      ) {
+        setShowShareMenu(false);
+      }
+      // 관리 메뉴 외부 클릭
+      if (
+        manageMenuRef.current &&
+        !manageMenuRef.current.contains(event.target as Node)
+      ) {
+        setShowManageMenu(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
   const handleBack = () => {
     router.back();
   };
 
-  const handleShare = async () => {
-    const shareData = {
-      title: post?.title,
-      text: `${post?.title}\n${post?.content.substring(0, 100)}...`,
-      url: window.location.href,
-    };
+  // 공유 메뉴 토글
+  const handleShareClick = () => {
+    setShowShareMenu(!showShareMenu);
+  };
 
+  // 주소 복사하기
+  const handleCopyLink = async () => {
     try {
-      if (navigator.share && navigator.canShare?.(shareData)) {
-        await navigator.share(shareData);
-      } else {
-        await navigator.clipboard.writeText(window.location.href);
-        success('링크가 복사되었습니다! 📋');
-      }
+      await navigator.clipboard.writeText(window.location.href);
+      success('링크가 복사되었습니다! 📋');
+      setShowShareMenu(false);
     } catch (err) {
-      console.error('공유 실패:', err);
-      error('공유에 실패했습니다.');
+      console.error('링크 복사 실패:', err);
+      error('링크 복사에 실패했습니다.');
+    }
+  };
+
+  // 카카오톡 공유하기
+  const handleKakaoShare = () => {
+    if (!post) return;
+
+    // 카카오 SDK가 로드되었는지 확인
+    if (typeof window !== 'undefined' && window.Kakao) {
+      if (!window.Kakao.isInitialized()) {
+        // 카카오 SDK 초기화 (실제 API 키로 교체 필요)
+        const kakaoApiKey = process.env.NEXT_PUBLIC_KAKAO_API_KEY;
+        if (kakaoApiKey) {
+          window.Kakao.init(kakaoApiKey);
+        }
+      }
+
+      window.Kakao.Share.sendDefault({
+        objectType: 'feed',
+        content: {
+          title: post.title,
+          description:
+            post.content.length > 100
+              ? `${post.content.substring(0, 100)}...`
+              : post.content,
+          imageUrl: 'https://your-domain.com/default-image.jpg', // 기본 이미지 사용
+          link: {
+            mobileWebUrl: window.location.href,
+            webUrl: window.location.href,
+          },
+        },
+        buttons: [
+          {
+            title: '자세히 보기',
+            link: {
+              mobileWebUrl: window.location.href,
+              webUrl: window.location.href,
+            },
+          },
+        ],
+      });
+
+      setShowShareMenu(false);
+      success('카카오톡으로 공유했습니다! 📱');
+    } else {
+      // 카카오 SDK가 없으면 링크 복사로 대체
+      handleCopyLink();
+      error('카카오톡 공유가 지원되지 않아 링크를 복사했습니다.');
     }
   };
 
@@ -455,17 +532,40 @@ export default function PostDetailPage() {
 
               {/* 프로필 우측 버튼들 */}
               <div className="flex items-center space-x-2 relative">
-                <button
-                  onClick={handleShare}
-                  className="p-2 text-gray-500 hover:text-gray-700 transition-colors"
-                  aria-label="공유하기"
-                >
-                  <Share2 className="w-4 h-4" />
-                </button>
+                {/* 공유 버튼 및 드롭다운 */}
+                <div className="relative" ref={shareMenuRef}>
+                  <button
+                    onClick={handleShareClick}
+                    className="p-2 text-gray-500 hover:text-gray-700 transition-colors"
+                    aria-label="공유하기"
+                  >
+                    <Share2 className="w-4 h-4" />
+                  </button>
+
+                  {/* 공유 메뉴 드롭다운 */}
+                  {showShareMenu && (
+                    <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-20">
+                      <button
+                        onClick={handleCopyLink}
+                        className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-3"
+                      >
+                        <Copy className="w-4 h-4" />
+                        <span>주소 복사하기</span>
+                      </button>
+                      <button
+                        onClick={handleKakaoShare}
+                        className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-3 border-t border-gray-100"
+                      >
+                        <MessageCircle className="w-4 h-4 text-yellow-500" />
+                        <span>카카오톡으로 공유</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
 
                 {/* 내가 작성한 포스트일 때만 관리 메뉴 표시 */}
                 {isMyPost && (
-                  <div className="relative">
+                  <div className="relative" ref={manageMenuRef}>
                     <button
                       onClick={() => setShowManageMenu(!showManageMenu)}
                       className="p-2 text-gray-500 hover:text-gray-700 transition-colors"
