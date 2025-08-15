@@ -304,3 +304,61 @@ export const getChatMessages = async (
     return [];
   }
 };
+
+// 채팅방 나가기
+export const leaveChatRoom = async (
+  chatRoomId: string,
+  userId: string,
+  userNickname: string
+): Promise<void> => {
+  try {
+    const chatRoomRef = doc(db, 'chatRooms', chatRoomId);
+    const chatRoomDoc = await getDoc(chatRoomRef);
+
+    if (!chatRoomDoc.exists()) {
+      throw new Error('채팅방을 찾을 수 없습니다.');
+    }
+
+    const chatRoomData = chatRoomDoc.data() as ChatRoom;
+
+    // 사용자가 채팅방 멤버인지 확인
+    if (!chatRoomData.memberIds.includes(userId)) {
+      throw new Error('채팅방의 멤버가 아닙니다.');
+    }
+
+    // 멤버 목록에서 사용자 제거
+    const updatedMemberIds = chatRoomData.memberIds.filter(
+      (id) => id !== userId
+    );
+    const updatedMemberCount = updatedMemberIds.length;
+
+    // 채팅방 업데이트
+    await updateDoc(chatRoomRef, {
+      memberIds: updatedMemberIds,
+      memberCount: updatedMemberCount,
+      updatedAt: Timestamp.now(),
+    });
+
+    // 시스템 메시지 추가 (나가기 알림)
+    await addDoc(collection(db, 'chatRooms', chatRoomId, 'messages'), {
+      chatRoomId,
+      senderId: 'system',
+      senderNickname: 'System',
+      senderProfileImage: '',
+      content: `${userNickname}님이 채팅방을 나갔습니다.`,
+      type: 'system',
+      createdAt: Timestamp.now(),
+    });
+
+    // 채팅방 마지막 메시지 업데이트
+    await updateDoc(chatRoomRef, {
+      lastMessage: `${userNickname}님이 채팅방을 나갔습니다.`,
+      lastMessageAt: Timestamp.now(),
+    });
+
+    console.log('채팅방에서 나갔습니다:', chatRoomId, userId);
+  } catch (error) {
+    console.error('채팅방 나가기 오류:', error);
+    throw error;
+  }
+};
