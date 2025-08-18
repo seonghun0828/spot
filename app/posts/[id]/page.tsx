@@ -170,7 +170,9 @@ export default function PostDetailPage() {
 
     console.log('카카오 공유 시작:', {
       kakaoSdk: typeof window !== 'undefined' && window.Kakao,
-      apiKey: process.env.NEXT_PUBLIC_KAKAO_JAVASCRIPT_KEY ? '설정됨' : '설정되지 않음',
+      apiKey: process.env.NEXT_PUBLIC_KAKAO_JAVASCRIPT_KEY
+        ? '설정됨'
+        : '설정되지 않음',
       currentUrl: window.location.href,
     });
 
@@ -191,12 +193,9 @@ export default function PostDetailPage() {
       window.Kakao.Share.sendDefault({
         objectType: 'feed',
         content: {
-          title: post.title,
-          description:
-            post.content.length > 100
-              ? `${post.content.substring(0, 100)}...`
-              : post.content,
-          imageUrl: 'https://your-domain.com/default-image.jpg', // 기본 이미지 사용
+          title: 'Spot에서 새로운 만남을 찾아보세요! 🤝',
+          description: `지금 바로 주위 사람들과 연결하는 위치 기반 소통 앱\n\n📍 "${post.title}"\n\n💬 관심 있는 분들과 채팅하고 만나보세요!`,
+          imageUrl: 'https://spot-app.vercel.app/spot-logo.svg', // Spot 대표 이미지
           link: {
             mobileWebUrl: window.location.href,
             webUrl: window.location.href,
@@ -204,17 +203,24 @@ export default function PostDetailPage() {
         },
         buttons: [
           {
-            title: '자세히 보기',
+            title: '공유된 포스트 보기',
             link: {
               mobileWebUrl: window.location.href,
               webUrl: window.location.href,
+            },
+          },
+          {
+            title: 'Spot 둘러보기',
+            link: {
+              mobileWebUrl: 'https://spot-app.vercel.app',
+              webUrl: 'https://spot-app.vercel.app',
             },
           },
         ],
       });
 
       setShowShareMenu(false);
-      success('카카오톡으로 공유했습니다! 📱');
+      success('Spot을 카카오톡으로 공유했습니다! 📱');
     } else {
       // 카카오 SDK가 없으면 링크 복사로 대체
       handleCopyLink();
