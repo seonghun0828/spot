@@ -190,12 +190,17 @@ export default function PostDetailPage() {
         }
       }
 
+      // 카카오톡 공유용 이미지 URL
+      // 임시로 공개 이미지 호스팅 서비스 사용 (나중에 실제 도메인으로 변경)
+      const imageUrl =
+        'https://github.com/seonghun0828/spot/blob/main/public/images/Spot-main-image.png?raw=true';
+
       window.Kakao.Share.sendDefault({
         objectType: 'feed',
         content: {
           title: 'Spot에서 새로운 만남을 찾아보세요! 🤝',
           description: `지금 바로 주위 사람들과 연결하는 위치 기반 소통 앱\n\n📍 "${post.title}"\n\n💬 관심 있는 분들과 채팅하고 만나보세요!`,
-          imageUrl: 'https://spot-app.vercel.app/spot-logo.svg', // Spot 대표 이미지
+          imageUrl: imageUrl, // Spot 메인 이미지
           link: {
             mobileWebUrl: window.location.href,
             webUrl: window.location.href,
@@ -209,18 +214,10 @@ export default function PostDetailPage() {
               webUrl: window.location.href,
             },
           },
-          {
-            title: 'Spot 둘러보기',
-            link: {
-              mobileWebUrl: 'https://spot-app.vercel.app',
-              webUrl: 'https://spot-app.vercel.app',
-            },
-          },
         ],
       });
 
       setShowShareMenu(false);
-      success('Spot을 카카오톡으로 공유했습니다! 📱');
     } else {
       // 카카오 SDK가 없으면 링크 복사로 대체
       handleCopyLink();
