@@ -521,7 +521,7 @@ export default function HomePage() {
                   )}
                 </button>
                 {isNotifOpen && (
-                  <div className="absolute right-0 mt-2 w-80 bg-white border border-gray-200 rounded-lg shadow-lg z-20">
+                  <div className="fixed inset-x-4 top-20 sm:absolute sm:inset-x-auto sm:right-0 sm:top-auto sm:mt-2 sm:w-80 bg-white border border-gray-200 rounded-lg shadow-lg z-20">
                     <div className="px-3 py-2 border-b border-gray-200 flex items-center justify-between">
                       <span className="text-xs text-gray-500">최근 알림</span>
                       {notifications.length > 0 && (
