@@ -281,6 +281,21 @@ export default function CreatePostPage() {
               </div>
             </div>
 
+            {/* 만료 시간 안내 */}
+            <div className="p-3 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg">
+              <div className="flex items-center space-x-2 mb-1">
+                <span className="text-blue-600 text-sm">⏰</span>
+                <span className="text-sm font-medium text-blue-800">
+                  포스트 만료 안내
+                </span>
+              </div>
+              <p className="text-xs text-blue-700">
+                포스트는 생성 후 <strong>1시간</strong>이 지나면 자동으로
+                만료됩니다. 만료되면 다른 사용자에게는 보이지 않지만, 작성자와
+                관심을 표시한 사용자는 내 활동에서 계속 확인할 수 있습니다.
+              </p>
+            </div>
+
             {/* 상세 설명 */}
             <div>
               <label
