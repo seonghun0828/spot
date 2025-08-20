@@ -5,7 +5,12 @@ import { useRouter, useParams } from 'next/navigation';
 import { ArrowLeft, LogOut, Send } from 'lucide-react';
 import { useAuth } from '@/app/contexts/AuthContext';
 import { useToast } from '@/contexts/ToastContext';
-import { getChatRoom, subscribeToMessages, sendMessage, leaveChatRoom } from '@/lib/chat';
+import {
+  getChatRoom,
+  subscribeToMessages,
+  sendMessage,
+  leaveChatRoom,
+} from '@/lib/chat';
 import { ChatRoom, ChatMessage } from '@/types/chat';
 import { Timestamp } from 'firebase/firestore';
 
@@ -115,11 +120,13 @@ export default function ChatRoomPage() {
   }, [messages]);
 
   const onBack = () => router.back();
-  
+
   const onLeave = async () => {
     if (!user || !chatRoom || leaving) return;
 
-    const confirmed = confirm('채팅방에서 나가시겠습니까?\n나가면 채팅 기록을 다시 볼 수 없습니다.');
+    const confirmed = confirm(
+      '채팅방에서 나가시겠습니까?\n나가면 채팅 기록을 다시 볼 수 없습니다.'
+    );
     if (!confirmed) return;
 
     try {
@@ -219,7 +226,7 @@ export default function ChatRoomPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="h-screen bg-gray-50 flex flex-col">
       {/* 헤더 */}
       <header className="bg-white border-b border-gray-200 px-4 py-3 sticky top-0 z-10">
         <div className="max-w-md mx-auto flex items-center justify-between">
@@ -244,8 +251,8 @@ export default function ChatRoomPage() {
       </header>
 
       {/* 메시지 리스트 */}
-      <div className="px-4">
-        <div className="max-w-md mx-auto h-[60vh] overflow-y-auto py-4 space-y-2">
+      <div className="px-4 flex-1 overflow-hidden">
+        <div className="max-w-md mx-auto h-full overflow-y-auto py-4 space-y-2">
           {messages.length === 0 ? (
             <div className="flex items-center justify-center h-full">
               <div className="text-center">
@@ -261,7 +268,7 @@ export default function ChatRoomPage() {
             messages.map((m) => {
               const isMe = m.senderId === user?.uid;
               const isSystem = m.senderId === 'system';
-              
+
               // 시스템 메시지 렌더링
               if (isSystem) {
                 return (
@@ -272,7 +279,7 @@ export default function ChatRoomPage() {
                   </div>
                 );
               }
-              
+
               // 일반 메시지 렌더링
               return (
                 <div
