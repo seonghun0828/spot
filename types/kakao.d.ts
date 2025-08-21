@@ -26,6 +26,7 @@ declare global {
         }) => void;
       };
     };
+    dataLayer: any[];
   }
 }
 

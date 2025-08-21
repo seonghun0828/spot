@@ -10,11 +10,39 @@ import { db } from './firebase';
 import { doc, setDoc, getDoc, updateDoc } from 'firebase/firestore';
 import { UserUpdateData } from '@/types/user';
 
+// GTM 이벤트 전송 함수
+const sendGTMEvent = (
+  eventName: string,
+  parameters: Record<string, string | number | boolean | null>
+) => {
+  if (typeof window !== 'undefined' && window.dataLayer) {
+    window.dataLayer.push({
+      event: eventName,
+      ...parameters,
+    });
+  }
+};
+
 // 구글 로그인 후 사용자 정보 저장
 export const signInWithGoogle = async () => {
   try {
     const provider = new GoogleAuthProvider();
+
+    // 로그인 시도 이벤트 전송
+    sendGTMEvent('login_attempt', {
+      login_method: 'google',
+      page_location: window.location.href,
+    });
+
     const result = await signInWithPopup(auth, provider);
+
+    // 로그인 성공 이벤트 전송
+    sendGTMEvent('login_success', {
+      login_method: 'google',
+      user_id: result.user.uid,
+      user_email: result.user.email,
+      page_location: window.location.href,
+    });
 
     // Firestore에 사용자 정보 저장
     const userRef = doc(db, 'users', result.user.uid);
@@ -35,6 +63,13 @@ export const signInWithGoogle = async () => {
         createdAt: new Date(),
         updatedAt: new Date(),
         lastLoginAt: new Date(),
+      });
+
+      // 신규 사용자 등록 이벤트 전송
+      sendGTMEvent('user_registration', {
+        login_method: 'google',
+        user_id: result.user.uid,
+        page_location: window.location.href,
       });
 
       console.log(
@@ -59,6 +94,18 @@ export const signInWithGoogle = async () => {
   } catch (error: unknown) {
     console.error('구글 로그인 오류:', error);
 
+    // 로그인 실패 이벤트 전송
+    let errorCode = 'unknown';
+    if (error && typeof error === 'object' && 'code' in error) {
+      errorCode = String(error.code);
+    }
+
+    sendGTMEvent('login_failure', {
+      login_method: 'google',
+      error_code: errorCode,
+      page_location: window.location.href,
+    });
+
     // 팝업이 사용자에 의해 닫힌 경우는 정상적인 동작이므로 에러를 던지지 않음
     if (
       error &&
@@ -78,9 +125,26 @@ export const signInWithGoogle = async () => {
 // 로그아웃 함수
 export const signOutUser = async () => {
   try {
+    // 로그아웃 시도 이벤트 전송
+    sendGTMEvent('logout_attempt', {
+      page_location: window.location.href,
+    });
+
     await signOut(auth);
+
+    // 로그아웃 성공 이벤트 전송
+    sendGTMEvent('logout_success', {
+      page_location: window.location.href,
+    });
   } catch (error) {
     console.error('로그아웃 오류:', error);
+
+    // 로그아웃 실패 이벤트 전송
+    sendGTMEvent('logout_failure', {
+      error_code: error instanceof Error ? error.message : 'unknown',
+      page_location: window.location.href,
+    });
+
     throw error;
   }
 };
