@@ -29,6 +29,19 @@ import {
   generateGeohash,
 } from './geolocation';
 
+// GTM 이벤트 전송 함수
+const sendGTMEvent = (
+  eventName: string,
+  parameters: Record<string, unknown>
+) => {
+  if (typeof window !== 'undefined' && window.dataLayer) {
+    window.dataLayer.push({
+      event: eventName,
+      ...parameters,
+    });
+  }
+};
+
 // 포스트 생성
 export const createPost = async (postData: PostCreateData): Promise<string> => {
   try {
@@ -139,6 +152,14 @@ export const toggleInterest = async (
         updatedAt: Timestamp.now(),
       });
 
+      // 관심 표시 이벤트 전송
+      sendGTMEvent('interest_added', {
+        post_id: postId,
+        post_author: postData?.authorId || '',
+        page_location:
+          typeof window !== 'undefined' ? window.location.href : '',
+      });
+
       // 알림 생성 (포스트 작성자에게)
       if (postData && userNickname) {
         try {
@@ -163,6 +184,14 @@ export const toggleInterest = async (
         interestedCount: increment(-1),
         updatedAt: Timestamp.now(),
       });
+
+      // 관심 표시 제거 이벤트 전송
+      sendGTMEvent('interest_removed', {
+        post_id: postId,
+        page_location:
+          typeof window !== 'undefined' ? window.location.href : '',
+      });
+
       console.log('관심 표시 제거:', postId, userId);
     }
   } catch (error) {

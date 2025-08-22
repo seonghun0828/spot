@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import {
@@ -32,6 +32,19 @@ import { PostData, InterestedUser } from '@/types/user';
 import { SelectableUser } from '@/types/chat';
 import { Timestamp } from 'firebase/firestore';
 import { POST_STATUS, getPostStatusLabel } from '@/constants/postStatus';
+
+// GTM 이벤트 전송 함수
+const sendGTMEvent = (
+  eventName: string,
+  parameters: Record<string, unknown>
+) => {
+  if (typeof window !== 'undefined' && window.dataLayer) {
+    window.dataLayer.push({
+      event: eventName,
+      ...parameters,
+    });
+  }
+};
 
 interface PostDetailClientProps {
   initialPost: PostData | null;
@@ -76,7 +89,7 @@ export default function PostDetailClient({
   const [currentTime, setCurrentTime] = useState<Date | null>(null);
 
   // 서버에서 받은 데이터를 Firestore Timestamp로 변환하는 함수
-  const convertToFirestoreTimestamp = (data: unknown): unknown => {
+  const convertToFirestoreTimestamp = useCallback((data: unknown): unknown => {
     if (!data) return data;
 
     if (
@@ -103,7 +116,32 @@ export default function PostDetailClient({
     }
 
     return data;
-  };
+  }, []);
+
+  // 포스트 상세 조회 이벤트 전송
+  const sendPostViewEvent = useCallback(() => {
+    if (post && !loading) {
+      sendGTMEvent('post_view', {
+        post_id: post.id,
+        post_author: post.authorId,
+        is_my_post: user?.uid === post.authorId,
+        page_location: window.location.href,
+      });
+
+      // 디버깅용 콘솔 로그
+      console.log('GTM 이벤트 전송됨:', {
+        event: 'post_view',
+        post_id: post.id,
+        post_author: post.authorId,
+        is_my_post: user?.uid === post.authorId,
+        page_location: window.location.href,
+      });
+    }
+  }, [post, loading, user]);
+
+  useEffect(() => {
+    sendPostViewEvent();
+  }, [sendPostViewEvent]);
 
   useEffect(() => {
     const loadPost = async () => {
@@ -217,6 +255,14 @@ export default function PostDetailClient({
   const handleCopyLink = async () => {
     try {
       await navigator.clipboard.writeText(window.location.href);
+
+      // 링크 복사 이벤트 전송
+      sendGTMEvent('share_post', {
+        post_id: post?.id || '',
+        share_method: 'copy_link',
+        page_location: window.location.href,
+      });
+
       success('링크가 복사되었습니다! 📋');
       setShowShareMenu(false);
     } catch (err) {
@@ -264,6 +310,13 @@ export default function PostDetailClient({
         ],
       });
 
+      // 카카오톡 공유 이벤트 전송
+      sendGTMEvent('share_post', {
+        post_id: post.id,
+        share_method: 'kakao',
+        page_location: window.location.href,
+      });
+
       setShowShareMenu(false);
     } else {
       handleCopyLink();
@@ -289,6 +342,35 @@ export default function PostDetailClient({
         newInterestState,
         user.displayName || user.email || '사용자'
       );
+
+      // 관심 표시 이벤트 전송 (상세페이지에서)
+      if (newInterestState) {
+        sendGTMEvent('interest_added', {
+          post_id: post.id,
+          post_author: post.authorId,
+          page_location: window.location.href,
+        });
+
+        // 디버깅용 콘솔 로그
+        console.log('GTM 이벤트 전송됨:', {
+          event: 'interest_added',
+          post_id: post.id,
+          post_author: post.authorId,
+          page_location: window.location.href,
+        });
+      } else {
+        sendGTMEvent('interest_removed', {
+          post_id: post.id,
+          page_location: window.location.href,
+        });
+
+        // 디버깅용 콘솔 로그
+        console.log('GTM 이벤트 전송됨:', {
+          event: 'interest_removed',
+          post_id: post.id,
+          page_location: window.location.href,
+        });
+      }
 
       setIsInterested(newInterestState);
 

@@ -11,6 +11,19 @@ import { getUserData } from '@/lib/auth';
 import { PostCreateData, PartialUserData } from '@/types/user';
 import { Timestamp } from 'firebase/firestore';
 
+// GTM 이벤트 전송 함수
+const sendGTMEvent = (
+  eventName: string,
+  parameters: Record<string, string | number | boolean | null>
+) => {
+  if (typeof window !== 'undefined' && window.dataLayer) {
+    window.dataLayer.push({
+      event: eventName,
+      ...parameters,
+    });
+  }
+};
+
 interface PostFormData {
   title: string;
   content: string;
@@ -214,12 +227,37 @@ export default function CreatePostPage() {
       };
 
       console.log('포스트 생성 데이터:', postData);
-      await createPost(postData);
+      const postId = await createPost(postData);
+
+      // 포스트 생성 성공 이벤트 전송
+      sendGTMEvent('post_created', {
+        post_id: postId,
+        max_participants: maxParticipants,
+        has_location: !!currentLocation,
+        page_location: window.location.href,
+      });
+
+      // 디버깅용 콘솔 로그
+      console.log('GTM 이벤트 전송됨:', {
+        event: 'post_created',
+        post_id: postId,
+        max_participants: maxParticipants,
+        has_location: !!currentLocation,
+        page_location: window.location.href,
+      });
 
       success('포스트가 성공적으로 생성되었습니다! 🎉');
       router.push('/');
     } catch (submitError) {
       console.error('포스트 생성 실패:', submitError);
+
+      // 포스트 생성 실패 이벤트 전송
+      sendGTMEvent('post_creation_failed', {
+        error_message:
+          submitError instanceof Error ? submitError.message : 'unknown',
+        page_location: window.location.href,
+      });
+
       error('포스트 생성에 실패했습니다. 다시 시도해주세요.');
     } finally {
       setIsSubmitting(false);

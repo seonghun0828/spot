@@ -27,6 +27,19 @@ import {
   createChatRoomCreatedNotification,
 } from './notifications';
 
+// GTM 이벤트 전송 함수
+const sendGTMEvent = (
+  eventName: string,
+  parameters: Record<string, unknown>
+) => {
+  if (typeof window !== 'undefined' && window.dataLayer) {
+    window.dataLayer.push({
+      event: eventName,
+      ...parameters,
+    });
+  }
+};
+
 // 채팅방 생성
 export const createChatRoom = async (
   chatRoomData: ChatRoomCreateData
@@ -40,6 +53,14 @@ export const createChatRoom = async (
 
     // 포스트 상태를 'closed'로 업데이트
     await updatePostStatus(chatRoomData.postId, 'closed');
+
+    // 채팅방 생성 이벤트 전송
+    sendGTMEvent('chat_room_created', {
+      chat_room_id: docRef.id,
+      post_id: chatRoomData.postId,
+      member_count: chatRoomData.memberCount,
+      page_location: typeof window !== 'undefined' ? window.location.href : '',
+    });
 
     // 채팅방 생성 알림 (멤버들에게)
     try {
