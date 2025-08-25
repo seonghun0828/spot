@@ -57,7 +57,7 @@ export interface PostData {
   interestedUserIds: string[]; // 관심 있어요 누른 사람들의 UID 목록
   meetingTime: Timestamp;
   status?: PostStatus; // 포스트 상태 (선택적)
-  expiresAt: Timestamp; // 포스트 만료 시간 (생성 후 1시간)
+  expiresAt?: Timestamp; // 포스트 만료 시간 (생성 후 1시간) - 만료 기능 제거로 선택적
   createdAt: Timestamp;
   updatedAt: Timestamp;
   isActive: boolean;
@@ -68,12 +68,8 @@ export interface PostData {
 // 포스트 생성용 타입 (id, timestamps, interested 관련, expiresAt 제외)
 export type PostCreateData = Omit<
   PostData,
-  | 'id'
-  | 'createdAt'
-  | 'updatedAt'
-  | 'interestedCount'
-  | 'interestedUserIds'
-  | 'expiresAt'
+  'id' | 'interestedCount' | 'interestedUserIds' | 'createdAt' | 'updatedAt'
+  // | 'expiresAt' // 만료 기능 제거
 >;
 
 // 포스트 업데이트용 타입

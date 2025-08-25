@@ -21,7 +21,8 @@ import {
   toggleInterest,
   getInterestedUsers,
   deletePost,
-  checkAndUpdatePostExpiry,
+  getPost, // 포스트 조회 함수 추가
+  // checkAndUpdatePostExpiry, // 만료 기능 제거
 } from '@/lib/posts';
 import {
   getInterestedUsersWithDetails,
@@ -85,8 +86,8 @@ export default function PostDetailClient({
   const shareMenuRef = useRef<HTMLDivElement>(null);
   const manageMenuRef = useRef<HTMLDivElement>(null);
 
-  // 실시간 시간 업데이트를 위한 상태
-  const [currentTime, setCurrentTime] = useState<Date | null>(null);
+  // 실시간 시간 업데이트를 위한 상태 - 만료 기능 제거
+  // const [currentTime, setCurrentTime] = useState<Date | null>(null);
 
   // 서버에서 받은 데이터를 Firestore Timestamp로 변환하는 함수
   const convertToFirestoreTimestamp = useCallback((data: unknown): unknown => {
@@ -160,7 +161,8 @@ export default function PostDetailClient({
 
       try {
         setLoading(true);
-        const postData = await checkAndUpdatePostExpiry(postId);
+        // const postData = await checkAndUpdatePostExpiry(postId); // 만료 기능 제거
+        const postData = await getPost(postId); // 일반 포스트 조회로 변경
 
         if (postData) {
           setPost(postData);
@@ -184,21 +186,21 @@ export default function PostDetailClient({
     if (postId) {
       loadPost();
     }
-  }, [postId, user, router, error, initialPost]);
+  }, [postId, user, router, error, initialPost, convertToFirestoreTimestamp]);
 
-  // 실시간 시간 업데이트 (1분마다)
-  useEffect(() => {
-    if (!post) return;
+  // 실시간 시간 업데이트 (1분마다) - 만료 기능 제거
+  // useEffect(() => {
+  //   if (!post) return;
 
-    // 초기 시간 설정
-    setCurrentTime(new Date());
+  //   // 초기 시간 설정
+  //   setCurrentTime(new Date());
 
-    const interval = setInterval(() => {
-      setCurrentTime(new Date());
-    }, 60000); // 1분마다 업데이트
+  //   const interval = setInterval(() => {
+  //     setCurrentTime(new Date());
+  //   }, 60000); // 1분마다 업데이트
 
-    return () => clearInterval(interval);
-  }, [post]);
+  //   return () => clearInterval(interval);
+  // }, [post]);
 
   // 현재 위치 가져오기 (거리 계산용)
   useEffect(() => {
@@ -591,109 +593,109 @@ export default function PostDetailClient({
     return `${diffInDays}일 전`;
   };
 
-  // 남은 시간 계산 함수
-  const getTimeRemaining = (): string => {
-    if (!post || !currentTime) return '';
+  // 남은 시간 계산 함수 - 만료 기능 제거
+  // const getTimeRemaining = (): string => {
+  //   if (!post) return '';
 
-    let expiresAt: Date;
-    if (
-      post.expiresAt &&
-      typeof post.expiresAt === 'object' &&
-      'toDate' in post.expiresAt &&
-      typeof post.expiresAt.toDate === 'function'
-    ) {
-      expiresAt = post.expiresAt.toDate();
-    } else if (
-      post.expiresAt &&
-      typeof post.expiresAt === 'object' &&
-      'seconds' in post.expiresAt
-    ) {
-      const expiresAtData = post.expiresAt as {
-        seconds: number;
-        nanoseconds: number;
-      };
-      expiresAt = new Date(expiresAtData.seconds * 1000);
-    } else {
-      return '';
-    }
+  //   let expiresAt: Date;
+  //   if (
+  //     post.expiresAt &&
+  //     typeof post.expiresAt === 'object' &&
+  //     'toDate' in post.expiresAt &&
+  //     typeof post.expiresAt.toDate === 'function'
+  //   ) {
+  //     expiresAt = post.expiresAt.toDate();
+  //   } else if (
+  //     post.expiresAt &&
+  //     typeof post.expiresAt === 'object' &&
+  //     'seconds' in post.expiresAt
+  //   ) {
+  //     const expiresAtData = post.expiresAt as {
+  //       seconds: number;
+  //       nanoseconds: number;
+  //     };
+  //     expiresAt = new Date(expiresAtData.seconds * 1000);
+  //   } else {
+  //     return '';
+  //   }
 
-    const diffInMs = expiresAt.getTime() - currentTime.getTime();
+  //   const diffInMs = expiresAt.getTime() - new Date().getTime();
 
-    if (diffInMs <= 0) {
-      return '만료됨';
-    }
+  //   if (diffInMs <= 0) {
+  //     return '만료됨';
+  //   }
 
-    const diffInMinutes = Math.floor(diffInMs / (1000 * 60));
-    const diffInHours = Math.floor(diffInMinutes / 60);
+  //   const diffInMinutes = Math.floor(diffInMs / (1000 * 60));
+  //   const diffInHours = Math.floor(diffInMinutes / 60);
 
-    if (diffInHours > 0) {
-      const remainingMinutes = diffInMinutes % 60;
-      return `${diffInHours}시간 ${remainingMinutes}분 남음`;
-    } else {
-      return `${diffInMinutes}분 남음`;
-    }
-  };
+  //   if (diffInHours > 0) {
+  //     const remainingMinutes = diffInMinutes % 60;
+  //     return `${diffInHours}시간 ${remainingMinutes}분 남음`;
+  //   } else {
+  //     return `${diffInMinutes}분 남음`;
+  //   }
+  // };
 
-  // 만료 진행률 계산 (0-100%)
-  const getExpiryProgress = (): number => {
-    if (!post || !currentTime) return 0;
+  // 만료 진행률 계산 (0-100%) - 만료 기능 제거
+  // const getExpiryProgress = (): number => {
+  //   if (!post) return 0;
 
-    let createdAt: Date;
-    let expiresAt: Date;
+  //   let createdAt: Date;
+  //   let expiresAt: Date;
 
-    // createdAt 처리
-    if (
-      post.createdAt &&
-      typeof post.createdAt === 'object' &&
-      'toDate' in post.createdAt &&
-      typeof post.createdAt.toDate === 'function'
-    ) {
-      createdAt = post.createdAt.toDate();
-    } else if (
-      post.createdAt &&
-      typeof post.createdAt === 'object' &&
-      'seconds' in post.createdAt
-    ) {
-      const createdAtData = post.createdAt as {
-        seconds: number;
-        nanoseconds: number;
-      };
-      createdAt = new Date(createdAtData.seconds * 1000);
-    } else {
-      return 0;
-    }
+  //   // createdAt 처리
+  //   if (
+  //     post.createdAt &&
+  //     typeof post.createdAt === 'object' &&
+  //     'toDate' in post.createdAt &&
+  //     typeof post.createdAt.toDate === 'function'
+  //   ) {
+  //     createdAt = post.createdAt.toDate();
+  //   } else if (
+  //     post.createdAt &&
+  //     typeof post.createdAt === 'object' &&
+  //     'seconds' in post.createdAt
+  //   ) {
+  //     const createdAtData = post.createdAt as {
+  //       seconds: number;
+  //       nanoseconds: number;
+  //     };
+  //     createdAt = new Date(createdAtData.seconds * 1000);
+  //   } else {
+  //     return 0;
+  //   }
 
-    // expiresAt 처리
-    if (
-      post.expiresAt &&
-      typeof post.expiresAt === 'object' &&
-      'toDate' in post.expiresAt &&
-      typeof post.expiresAt.toDate === 'function'
-    ) {
-      expiresAt = post.expiresAt.toDate();
-    } else if (
-      post.expiresAt &&
-      typeof post.expiresAt === 'object' &&
-      'seconds' in post.expiresAt
-    ) {
-      const expiresAtData = post.expiresAt as {
-        seconds: number;
-        nanoseconds: number;
-      };
-      expiresAt = new Date(expiresAtData.seconds * 1000);
-    } else {
-      return 0;
-    }
+  //   // expiresAt 처리
+  //   if (
+  //     post.expiresAt &&
+  //     typeof post.expiresAt === 'object' &&
+  //     'toDate' in post.expiresAt &&
+  //     typeof post.expiresAt.toDate === 'function'
+  //   ) {
+  //     expiresAt = post.expiresAt.toDate();
+  //   } else if (
+  //     post.expiresAt &&
+  //     typeof post.expiresAt === 'object' &&
+  //     'seconds' in post.expiresAt
+  //   ) {
+  //     const expiresAtData = post.expiresAt as {
+  //       seconds: number;
+  //       nanoseconds: number;
+  //     };
+  //     expiresAt = new Date(expiresAtData.seconds * 1000);
+  //   } else {
+  //     return 0;
+  //   }
 
-    const totalDuration = expiresAt.getTime() - createdAt.getTime();
-    const elapsed = currentTime.getTime() - createdAt.getTime();
+  //   const totalDuration = expiresAt.getTime() - createdAt.getTime();
+  //   const elapsed = new Date().getTime() - createdAt.getTime();
 
-    if (totalDuration <= 0) return 100;
-    if (elapsed <= 0) return 0;
+  //   if (totalDuration <= 0) return 100;
+  //   if (elapsed <= 0) return 0;
 
-    const progress = (elapsed / totalDuration) * 100;
-    return Math.min(progress, 100);
-  };
+  //   const progress = (elapsed / totalDuration) * 100;
+  //   return Math.min(progress, 100);
+  // };
 
   const isMyPost = user?.uid === post?.authorId;
 
@@ -886,7 +888,7 @@ export default function PostDetailClient({
           </div>
 
           {/* 만료 시간 표시 - 클라이언트에서만 렌더링 */}
-          {currentTime && (
+          {/* {currentTime && (
             <div className="p-3 bg-gradient-to-r from-orange-50 to-red-50 border border-orange-200 rounded-lg mb-4">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center space-x-2">
@@ -912,7 +914,7 @@ export default function PostDetailClient({
               </div>
 
               {/* 진행 바 */}
-              {getTimeRemaining() !== '만료됨' && (
+          {/* {getTimeRemaining() !== '만료됨' && (
                 <div className="w-full bg-gray-200 rounded-full h-2">
                   <div
                     className={`h-2 rounded-full transition-all duration-300 ${
@@ -925,13 +927,13 @@ export default function PostDetailClient({
                     style={{ width: `${getExpiryProgress()}%` }}
                   ></div>
                 </div>
-              )}
+              )} */}
 
-              <p className="text-xs text-orange-700 mt-1">
+          {/* <p className="text-xs text-orange-700 mt-1">
                 포스트는 생성 후 1시간이 지나면 자동으로 만료됩니다
               </p>
             </div>
-          )}
+          )} */}
 
           <div className="space-y-3">
             {!isMyPost && (

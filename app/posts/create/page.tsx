@@ -203,8 +203,8 @@ export default function CreatePostPage() {
       }
 
       // 현재 시간에서 1시간 후를 기본 모임 시간으로 설정 (임시)
-      const defaultMeetingTime = new Date();
-      defaultMeetingTime.setHours(defaultMeetingTime.getHours() + 1);
+      // const defaultMeetingTime = new Date();
+      // defaultMeetingTime.setHours(defaultMeetingTime.getHours() + 1);
 
       // 희망 인원은 문자열 그대로 저장
       const maxParticipants = formData.maxParticipants;
@@ -222,7 +222,7 @@ export default function CreatePostPage() {
           address: '위치 정보 없음',
         },
         maxParticipants,
-        meetingTime: Timestamp.fromDate(defaultMeetingTime),
+        meetingTime: Timestamp.now(), // 현재 시간으로 설정 (만료 기능 제거)
         isActive: true,
       };
 
@@ -320,7 +320,7 @@ export default function CreatePostPage() {
             </div>
 
             {/* 만료 시간 안내 */}
-            <div className="p-3 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg">
+            {/* <div className="p-3 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg">
               <div className="flex items-center space-x-2 mb-1">
                 <span className="text-blue-600 text-sm">⏰</span>
                 <span className="text-sm font-medium text-blue-800">
@@ -332,7 +332,7 @@ export default function CreatePostPage() {
                 만료됩니다. 만료되면 다른 사용자에게는 보이지 않지만, 작성자와
                 관심을 표시한 사용자는 내 활동에서 계속 확인할 수 있습니다.
               </p>
-            </div>
+            </div> */}
 
             {/* 상세 설명 */}
             <div>

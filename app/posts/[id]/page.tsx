@@ -1,5 +1,5 @@
 import { Metadata } from 'next';
-import { checkAndUpdatePostExpiry } from '@/lib/posts';
+import { getPost } from '@/lib/posts'; // 일반 포스트 조회로 변경
 import PostDetailClient from './PostDetailClient';
 
 // Firestore Timestamp를 일반 객체로 변환하는 함수
@@ -47,7 +47,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   try {
     const { id } = await params;
-    const postData = await checkAndUpdatePostExpiry(id);
+    const postData = await getPost(id);
 
     if (!postData) {
       return {
@@ -114,7 +114,7 @@ export default async function PostDetailPage({
   try {
     const { id } = await params;
     postId = id;
-    const postData = await checkAndUpdatePostExpiry(id);
+    const postData = await getPost(id);
 
     // Firestore 데이터를 클라이언트 컴포넌트용으로 변환
     if (postData) {

@@ -10,7 +10,7 @@ import { useAuth } from './contexts/AuthContext';
 import {
   getActivePosts,
   getNearbyPosts,
-  updateExpiredPosts,
+  // updateExpiredPosts, // 만료 기능 제거
 } from '@/lib/posts';
 import { PostData } from '@/types/user';
 import { Timestamp } from 'firebase/firestore';
@@ -262,7 +262,7 @@ export default function HomePage() {
         setError(null);
 
         // 먼저 만료된 포스트들을 자동으로 업데이트
-        await updateExpiredPosts();
+        // await updateExpiredPosts(); // 만료 기능 제거
 
         let fetchedPosts: PostData[];
 
@@ -451,7 +451,7 @@ export default function HomePage() {
       setError(null);
 
       // 먼저 만료된 포스트들을 자동으로 업데이트
-      await updateExpiredPosts();
+      // await updateExpiredPosts(); // 만료 기능 제거
 
       // 위치 정보 새로고침
       await getCurrentLocation();
@@ -686,11 +686,8 @@ export default function HomePage() {
               ))}
             </div>
           ) : posts.length > 0 ? (
-            posts
-              .filter(
-                (post) => post.status === 'open' || post.status === undefined
-              ) // 만료되지 않은 포스트만 표시
-              .map((post) => (
+            <div className="space-y-4">
+              {posts.map((post) => (
                 <div
                   key={post.id}
                   onClick={() => handlePostClick(post.id)}
@@ -769,10 +766,9 @@ export default function HomePage() {
                     </div>
                   </div>
                 </div>
-              ))
-          ) : posts.filter(
-              (post) => post.status === 'open' || post.status === undefined
-            ).length === 0 ? (
+              ))}
+            </div>
+          ) : (
             <div className="text-center py-12">
               <div className="w-16 h-16 bg-gray-200 rounded-full mx-auto mb-4 flex items-center justify-center">
                 <MapPin className="w-8 h-8 text-gray-400" />
@@ -782,25 +778,6 @@ export default function HomePage() {
               </h3>
               <p className="text-gray-600 text-sm mb-4">
                 새로운 만남을 위해 포스트를 작성해보세요!
-              </p>
-              <button
-                onClick={handleCreatePost}
-                className="bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-600 transition-colors"
-              >
-                포스트 작성하기
-              </button>
-            </div>
-          ) : (
-            // 모든 포스트가 만료된 경우
-            <div className="text-center py-12">
-              <div className="w-16 h-16 bg-gray-200 rounded-full mx-auto mb-4 flex items-center justify-center">
-                <MapPin className="w-8 h-8 text-gray-400" />
-              </div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">
-                모든 포스트가 만료되었어요
-              </h3>
-              <p className="text-gray-600 text-sm mb-4">
-                새로운 포스트를 작성하거나 잠시 후 다시 확인해보세요!
               </p>
               <button
                 onClick={handleCreatePost}
